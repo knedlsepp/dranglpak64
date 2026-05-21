@@ -36,6 +36,7 @@
             until [ -r "/dev/gpiochip0" ] && [ -w "/dev/gpiochip0" ]; do
               sleep 1
             done
+            # FIXME: If drink-dispenser dies this script doesn't stop. (But it should!)
             ${upload-rom}/bin/upload-rom | ${drink-dispenser}/bin/drink-dispenser
           '';
         in
