@@ -19,7 +19,7 @@
             runtimeInputs = [ pkgs.sc64deployer ];
             text = ''
               until sc64deployer list; do sleep 2; done
-              sc64deployer upload /var/lib/sc64deployer/build.rom
+              sc64deployer upload ${pkgs.nk64-rom}/mk64.eu.v11.z64
               # Prevent "[IS-Viewer 64]: Stopped listening" via 'tail -f /dev/null'
               exec tail -f /dev/null | sc64deployer debug --isv 0x03FF0000
             '';
