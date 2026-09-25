@@ -9,7 +9,7 @@
   };
   outputs = { self, nixpkgs, nixos-hardware, llm-agents, summercart64 }: {
     nixosConfigurations = {
-      sempfberry = nixpkgs.lib.nixosSystem {
+      dranglpak64 = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         modules = [
           ({ pkgs, ... }: {
@@ -25,7 +25,7 @@
     };
 
     images = {
-      sempfberry = (self.nixosConfigurations.sempfberry.extendModules {
+      dranglpak64 = (self.nixosConfigurations.dranglpak64.extendModules {
         modules = [ "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64-new-kernel-no-zfs-installer.nix" ];
       }).config.system.build.sdImage;
     };

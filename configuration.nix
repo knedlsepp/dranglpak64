@@ -72,7 +72,7 @@
 
 
   services.openssh.enable = true;
-  networking.hostName = "sempfberry";
+  networking.hostName = "dranglpak64";
   users = {
     users.root = {
       openssh.authorizedKeys.keys = [
