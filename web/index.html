@@ -51,7 +51,7 @@
   .conn { font-size: .8em; color: var(--muted); }
   .conn.off { color: var(--hot); }
 
-  .totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2em; }
+  .totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2em; }
   .stat, section {
     background: linear-gradient(180deg, #161a22 0%, var(--panel) 100%);
     border: 1px solid var(--line); border-radius: .6em;
@@ -98,10 +98,9 @@
 
   footer { display: flex; justify-content: space-between; color: var(--muted); font-size: .9em; gap: 2em; }
 
-  .audience { display: grid; grid-template-columns: auto 1fr minmax(0, 30em); align-items: center; gap: .6em 1.2em; padding: .7em 1.2em; }
+  .audience { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .6em 1.2em; padding: .7em 1.2em; }
   .audience-title { font-family: var(--display); font-size: 1.15em; }
-  .audience-hint { color: var(--muted); font-size: .85em; }
-  .steal-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5em; }
+  .steal-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5em; justify-self: end; width: min(100%, 30em); }
   .audience button {
     font: inherit; font-family: var(--display); font-size: 1.1em; padding: .55em .6em .4em; border-radius: .5em; cursor: pointer;
     border: 0; color: #0b0c10; background: var(--pc, var(--accent));
@@ -109,7 +108,9 @@
   }
   .audience button small { display: block; font-family: var(--sans); font-size: .62em; font-weight: 700; margin-top: .15em; }
   .say { grid-column: 1 / -1; display: flex; gap: .5em; }
-  .say select { font: inherit; color: var(--text); background: #0b0d12; border: 1px solid var(--line); border-radius: .5em; padding: .5em; }
+  .say-to { display: flex; gap: .3em; }
+  .say-to button { font-size: .85em; padding: .45em .6em .35em; opacity: .4; }
+  .say-to button.on { opacity: 1; outline: 2px solid var(--text); outline-offset: 1px; }
   .say input {
     flex: 1; min-width: 0; font: inherit; color: var(--text); background: #0b0d12; border: 1px solid var(--line);
     border-radius: .5em; padding: .5em .8em;
@@ -134,7 +135,11 @@
 
   @media (max-width: 800px) {
     .audience { display: block; padding: .9em 1em; }
-    .audience-hint { margin: .3em 0 .8em; }
+    .audience-title { margin-bottom: .7em; }
+    .steal-buttons { width: 100%; }
+    .say { flex-wrap: wrap; }
+    .say-to { width: 100%; }
+    .say-to button { flex: 1; }
     .say { margin-top: .7em; }
     .audience-feedback { margin-top: .6em; }
     html, body { height: auto; }
@@ -163,26 +168,24 @@
 <body>
 <div class="wrap">
   <header>
-    <h1><img src="/logo.svg" alt="DranglPak64"><small>HALL OF SHAME · ROBOEXOTICA</small></h1>
+    <h1><img src="/logo.svg" alt="DranglPak64"><small>ROBOEXOTICA 2026</small></h1>
     <div class="conn" id="conn">verbinde…</div>
   </header>
 
   <section class="audience">
     <div class="audience-title">📣 Publikum</div>
-    <div class="audience-hint">Stiehl den Spielern ihr Item oder schick ihnen eine Nachricht auf den Bildschirm. Kein Drink.</div>
     <div class="steal-buttons" id="steal-buttons"></div>
     <form class="say" id="say">
-      <select id="say-to" aria-label="Empfänger"></select>
-      <input id="say-text" maxlength="64" autocomplete="off" placeholder="Nachricht an die Spieler…">
-      <button type="submit">💬 Senden</button>
+      <div class="say-to" id="say-to" role="radiogroup" aria-label="An wen"></div>
+      <input id="say-text" maxlength="64" autocomplete="off" placeholder="Schreib den Spielern etwas…">
+      <button type="submit">💬 Schicken</button>
     </form>
     <div class="audience-feedback" id="audience-feedback"></div>
   </section>
 
   <div class="totals">
-    <div class="stat"><div class="label">Heute gezapft</div><div class="value fire" id="ml">0 ml</div></div>
-    <div class="stat"><div class="label">Treffer heute</div><div class="value chrome" id="hits">0</div></div>
-    <div class="stat"><div class="label">Negroni-Codes geknackt</div><div class="value chrome" id="negroni">0</div></div>
+    <div class="stat"><div class="label">Heute gedrangelt</div><div class="value fire" id="ml">0,0 cl</div></div>
+    <div class="stat"><div class="label">Shots gedrangelt</div><div class="value chrome" id="hits">0</div></div>
   </div>
 
   <main>
@@ -191,7 +194,7 @@
       <div class="players" id="players"></div>
     </section>
     <section>
-      <h2>TODESURSACHEN</h2>
+      <h2>WAS PASSIERT IST</h2>
       <div class="causes" id="causes"></div>
     </section>
     <section>
@@ -201,8 +204,8 @@
   </main>
 
   <footer>
-    <div id="record">Noch kein Rekord – wer traut sich?</div>
-    <div>Wer getroffen wird, trinkt. 🍹 Bitte verantwortungsvoll genießen.</div>
+    <div id="record">Noch kein Pechvogel – wer traut sich?</div>
+    <div>Wer etwas abkriegt, trinkt. 🍹 Bitte mit Maß und Ziel.</div>
   </footer>
 </div>
 
@@ -216,21 +219,36 @@
 <script>
 const EVENTS = {
   driving_spinout:     ["🌀", "Ins Schleudern gekommen"],
-  early_start_spinout: ["🚦", "Fehlstart!"],
-  explosion_crash:     ["💥", "In die Luft gejagt"],
+  early_start_spinout: ["🚦", "Fehlstart"],
+  // Other causes of VERTICAL_TUMBLE_TRIGGER than the hit_* below
+  explosion_crash:     ["💥", "Zusammengekracht"],
+  hit_bomb:            ["💣", "In die Luft geflogen"],
+  hit_bus:             ["🚌", "In den Schulbus gekracht"],
+  hit_car:             ["🚗", "In ein Auto gekracht"],
+  hit_chain_chomp:     ["⛓️", "Vom Kettenhund erwischt"],
+  hit_fake_item_box:   ["❓", "Falsche Itembox erwischt"],
+  hit_snowman:         ["⛄", "In einen Schneemann gekracht"],
+  hit_train:           ["🚂", "Vom Zug erwischt"],
+  hit_truck:           ["🚚", "In einen Lkw gekracht"],
   fell_in_lava:        ["🌋", "In die Lava gefallen"],
   fell_in_water:       ["🌊", "Baden gegangen"],
+  // Other causes of HIGH_TUMBLE_TRIGGER than those below
   high_tumble:         ["🤸", "Durch die Luft gewirbelt"],
+  hit_blue_shell:      ["🔵", "Blauer Panzer"],
+  hit_mole:            ["🕳️", "Vom Maulwurf erwischt"],
+  hit_red_shell:       ["🔴", "Roter Panzer"],
   hit_banana:          ["🍌", "Auf der Banane ausgerutscht"],
-  hit_by_star:         ["⭐", "Vom Stern überrollt"],
+  hit_by_star:         ["⭐", "Vom Stern überfahren"],
   hit_paddle_boat:     ["🚢", "Vom Raddampfer erwischt"],
   lightning_strike:    ["⚡", "Vom Blitz getroffen"],
-  low_tumble:          ["🙃", "Überschlagen"],
-  negroni_code:        ["🍸", "Negroni-Code geknackt!"],
-  spinout:             ["💫", "Weggedreht"],
+  // Only green shells set LOW_TUMBLE_TRIGGER
+  low_tumble:          ["🟢", "Grüner Panzer"],
+  spinout:             ["💫", "Gedreht"],
   squished:            ["🥞", "Plattgewalzt"],
   terrain_tumble:      ["🪨", "Über Stock und Stein"],
 };
+// Only for priming the tubes; old stats may still contain them
+const HIDDEN_EVENTS = ["negroni_code"];
 const placeLabel = n => ["🥇", "🥈", "🥉"][n - 1] || `${n}.`;
 const COLORS = ["#ff5d5d", "#4fc3ff", "#7dff6a", "#ffd23f", "#c38bff", "#ff9a3c", "#3cffd8", "#ff7ad9"];
 
@@ -246,7 +264,7 @@ const color = (p, character) => {
   const c = character ?? (game ? game.characters[p] : null);
   return c != null && c >= 0 ? CHARACTER_COLORS[c] : COLORS[p % COLORS.length];
 };
-const fmtMl = ml => `${Math.round(ml).toLocaleString("de-AT")} ml`;
+const fmtCl = ml => `${(ml / 10).toLocaleString("de-AT", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} cl`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 function setValue(el, text) {
@@ -258,6 +276,8 @@ function setValue(el, text) {
 }
 
 let stealButtonsFor = null;
+// Recipient of messages: "all" or a player index
+let sayTo = "all";
 function renderStealButtons() {
   const players = game ? game.players : 4;
   const key = JSON.stringify(game);
@@ -266,18 +286,17 @@ function renderStealButtons() {
   $("steal-buttons").style.gridTemplateColumns = `repeat(${players}, 1fr)`;
   $("steal-buttons").innerHTML = [...Array(players).keys()].map(p =>
     `<button data-p="${p}" style="--pc:${color(p)}">P${p + 1}<small>Item stehlen</small></button>`).join("");
-  const to = $("say-to").value;
-  $("say-to").innerHTML = `<option value="all">An alle</option>` +
-    [...Array(players).keys()].map(p => `<option value="${p}">An P${p + 1}</option>`).join("");
-  if ([...$("say-to").options].some(o => o.value === to)) $("say-to").value = to;
+  if (sayTo !== "all" && Number(sayTo) >= players) sayTo = "all";
+  $("say-to").innerHTML = [["all", "Alle", "#9aa3b5"], ...[...Array(players).keys()].map(p => [String(p), `P${p + 1}`, color(p)])]
+    .map(([to, label, c]) => `<button type="button" role="radio" data-to="${to}" style="--pc:${c}"` +
+      ` class="${to === sayTo ? "on" : ""}" aria-checked="${to === sayTo}">${label}</button>`).join("");
 }
 
 function render(s) {
   game = s.game;
   renderStealButtons();
-  setValue($("ml"), fmtMl(s.totalMl));
+  setValue($("ml"), fmtCl(s.totalMl));
   setValue($("hits"), String(s.totalHits));
-  setValue($("negroni"), String(s.byEvent.negroni_code || 0));
 
   const round = Object.entries(s.round).map(([p, d]) => [Number(p), d]).sort((a, b) => a[0] - b[0]);
   const maxHits = Math.max(1, ...round.map(([, d]) => d.hits));
@@ -285,31 +304,36 @@ function render(s) {
     <div class="player">
       <div class="badge" style="background:${color(p)}">P${p + 1}</div>
       <div class="bar"><div style="width:${100 * d.hits / maxHits}%;background:${color(p)}"></div></div>
-      <div class="nums">${d.hits}× <span>· ${fmtMl(d.ml)}</span></div>
+      <div class="nums">${d.hits}× <span>· ${fmtCl(d.ml)}</span></div>
       <div class="place">${d.place ? placeLabel(d.place) : ""}</div>
     </div>`).join("")
-    : `<div class="empty">Warte auf die nächste Runde… 🏁</div>`;
+    : `<div class="empty">Gleich geht's weiter… 🏁</div>`;
 
-  const causes = Object.entries(s.byEvent).filter(([e]) => e !== "negroni_code").sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const causes = Object.entries(s.byEvent).filter(([e]) => !HIDDEN_EVENTS.includes(e)).sort((a, b) => b[1] - a[1]).slice(0, 8);
   const maxCause = Math.max(1, ...causes.map(([, n]) => n));
   $("causes").innerHTML = causes.length ? causes.map(([e, n]) => {
     const [emoji, name] = describe(e);
     return `<div class="cause"><div class="emoji">${emoji}</div><div class="name">${esc(name)}</div><div class="n">${n}</div>
       <div></div><div class="track"><div style="width:${100 * n / maxCause}%"></div></div></div>`;
-  }).join("") : `<div class="empty">Noch niemand verunglückt.</div>`;
+  }).join("") : `<div class="empty">Bis jetzt hat's noch keinen erwischt.</div>`;
 
-  $("ticker").innerHTML = s.ticker.map(t => {
-    const [emoji, name] = describe(t.event);
-    return `<li><span class="t">${esc(t.t)}</span><span class="who" style="background:${color(t.player, t.character)}">P${t.player + 1}</span>
-      <span class="what">${emoji} ${esc(name)}</span><span class="ml">+${fmtMl(t.ml)}</span></li>`;
+  $("ticker").innerHTML = s.ticker.filter(t => !HIDDEN_EVENTS.includes(t.event)).map(t => {
+    const who = t.player >= 0
+      ? `<span class="who" style="background:${color(t.player, t.character)}">P${t.player + 1}</span>`
+      : `<span class="who" style="background:#9aa3b5">Alle</span>`;
+    const [what, right] = {
+      audience_say: [`💬 ${esc(t.text)}`, "📣"],
+      audience_steal: [t.effect === "item" ? "🫳 Item gestohlen" : "🍀 Nichts zu holen", "📣"],
+    }[t.event] || [describe(t.event).map(esc).join(" "), `+${fmtCl(t.ml)}`];
+    return `<li><span class="t">${esc(t.t)}</span>${who}<span class="what">${what}</span><span class="ml">${right}</span></li>`;
   }).join("");
 
   const yesterday = s.recordYesterday
     ? ` · Gestern: <b>P${s.recordYesterday.player + 1}</b> mit <b>${s.recordYesterday.hits}</b>`
     : "";
   $("record").innerHTML = (s.record
-    ? `🏆 Rekord-Pechvogel: <b>P${s.record.player + 1}</b> mit <b>${s.record.hits} Treffern</b> in einer Runde (${esc(s.record.at)})`
-    : "Noch kein Rekord – wer traut sich?") + yesterday;
+    ? `🏆 Pechvogel vom Tag: <b>P${s.record.player + 1}</b> mit <b>${s.record.hits} Shots</b> in einer Runde (${esc(s.record.at)})`
+    : "Noch kein Pechvogel – wer traut sich?") + yesterday;
 }
 
 renderStealButtons();
@@ -319,13 +343,21 @@ async function post(url, body, done, failed) {
     const r = await fetch(url, { method: "POST", body });
     $("audience-feedback").textContent = r.ok ? done : failed;
   } catch (e) {
-    $("audience-feedback").textContent = "Hat nicht geklappt, nochmal probieren.";
+    $("audience-feedback").textContent = "Hat nicht funktioniert, bitte noch einmal probieren.";
   }
 }
 
 $("steal-buttons").addEventListener("click", ev => {
   const btn = ev.target.closest("button");
-  if (btn) post(`/steal?player=${btn.dataset.p}`, null, `🫳 Ab damit, P${Number(btn.dataset.p) + 1}!`, "Hat nicht geklappt.");
+  if (btn) post(`/steal?player=${btn.dataset.p}`, null, "🫳 Servus, Item!", "Hat nicht funktioniert.");
+});
+
+$("say-to").addEventListener("click", ev => {
+  const btn = ev.target.closest("button");
+  if (!btn) return;
+  sayTo = btn.dataset.to;
+  stealButtonsFor = null;
+  renderStealButtons();
 });
 
 $("say").addEventListener("submit", ev => {
@@ -333,7 +365,7 @@ $("say").addEventListener("submit", ev => {
   const text = $("say-text").value.trim();
   if (!text) return;
   $("say-text").value = "";
-  post(`/say?to=${$("say-to").value}`, text, "💬 Gesendet!", "Nur Buchstaben, Zahlen und Satzzeichen, bitte.");
+  post(`/say?to=${sayTo}`, text, "💬 Ist unterwegs!", "Bitte nur Buchstaben, Zahlen und Satzzeichen.");
 });
 
 let lastFlash = null, flashTimer = null;
@@ -344,16 +376,17 @@ function flash(t) {
   const audience = t.event.startsWith("audience_");
   const [emoji, name] = {
     race_finish: ["🏁", `Im Ziel – Platz ${t.place}!`],
-    battle_out:  ["🎈", `Alle Ballons weg – Platz ${t.place}`],
+    battle_out:  ["🎈", `Ballons weg – Platz ${t.place}`],
     battle_win:  ["🏆", "Battle gewonnen!"],
     audience_steal: t.effect === "item" ? ["🫳", "Item gestohlen!"] : ["🍀", "Glück gehabt – nichts zu holen"],
     audience_say: ["💬", `„${t.text}“`],
   }[t.event] || describe(t.event);
   $("f-emoji").textContent = emoji;
-  $("f-who").textContent = t.player >= 0 ? (t.event === "audience_say" ? `→ P${t.player + 1}` : `P${t.player + 1}`) : "";
+  const recipient = t.event === "audience_say" ? "→ " : "";
+  $("f-who").textContent = recipient + (t.player >= 0 ? `P${t.player + 1}` : recipient ? "Alle" : "");
   $("f-who").style.color = t.player >= 0 ? color(t.player, t.character) : "";
   $("f-what").textContent = name;
-  $("f-ml").textContent = audience ? "📣 PUBLIKUM" : finish ? placeLabel(t.place) : `+${fmtMl(t.ml)}`;
+  $("f-ml").textContent = audience ? "📣 PUBLIKUM" : finish ? placeLabel(t.place) : `+${fmtCl(t.ml)}`;
   $("flash").classList.add("show");
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => $("flash").classList.remove("show"), 2200);

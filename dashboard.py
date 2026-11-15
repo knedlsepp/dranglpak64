@@ -52,10 +52,8 @@ ROUND_IDLE_TIMEOUT: float = 300.0
 TICKER_LENGTH: int = 12
 # A new day starts at this hour, so a long night doesn't get reset midway.
 DAY_START_HOUR: int = 6
-# Dispense a drink, but are a reward rather than a hit.
-NOT_A_HIT: set[str] = {"negroni_code"}
-# Sent every frame while the buttons are held: one press counts once.
-HELD_EVENTS: set[str] = {"negroni_code"}
+# Dispense, but only to prime the silicone tubes before playing: not shown
+PRIMING_EVENTS: set[str] = {"negroni_code"}
 
 # Lines sent here end up in the game, via the stdin of `sc64deployer debug`
 AUDIENCE_ADDR: tuple[str, int] = ("127.0.0.1", 6465)
@@ -105,7 +103,6 @@ class Dashboard:
         self._game: dict | None = None
         # Mirror of the dispenser's pumps, to count actual pump time.
         self._pump_until: dict[int, float] = {}
-        self._last_drink: dict[int, str] = {}
         self._seq = 0
         # Bumped on every change, lets polling clients skip unchanged state.
         self._version = 0
@@ -176,15 +173,20 @@ class Dashboard:
         self._audience_sock.sendto(f"say {'*' if to is None else to} {text}\n".encode(), AUDIENCE_ADDR)
         logging.info(f"Audience says to {'everyone' if to is None else f'player {to}'}: {text}")
         with self._lock:
-            self._latest = {**self._next_entry_locked("audience_say", -1 if to is None else to), "text": text}
-            self._broadcast_locked()
+            self._add_to_ticker_locked({**self._next_entry_locked("audience_say", -1 if to is None else to), "text": text})
         return True
 
     def audience_stole(self, player: int, effect: str) -> None:
         """The game reports what stealing did."""
         with self._lock:
-            self._latest = {**self._next_entry_locked("audience_steal", player), "effect": effect}
-            self._broadcast_locked()
+            self._add_to_ticker_locked({**self._next_entry_locked("audience_steal", player), "effect": effect})
+
+    def _add_to_ticker_locked(self, entry: dict) -> None:
+        """For entries without a drink: shown and in the ticker, nothing counted."""
+        self._stats["ticker"] = [entry, *self._stats["ticker"]][:TICKER_LENGTH]
+        self._latest = entry
+        self._save_locked()
+        self._broadcast_locked()
 
     def finish_race(self, event: str, player: int, place: int) -> None:
         with self._lock:
@@ -195,6 +197,8 @@ class Dashboard:
             self._broadcast_locked()
 
     def handle_drink(self, event: str, player: int, duration: float) -> None:
+        if event in PRIMING_EVENTS:
+            return
         now = time.monotonic()
         with self._lock:
             until = self._pump_until.get(player, 0.0)
@@ -204,26 +208,19 @@ class Dashboard:
             self._pump_until[player] = max(until, now + duration)
             ml = round(pump_time * ML_PER_SECOND, 1)
 
-            held = pumping and event in HELD_EVENTS and self._last_drink.get(player) == event
-            self._last_drink[player] = event
-            if held:
-                self._extend_held_locked(event, player, ml)
-                return
-
             entry = {**self._next_entry_locked(event, player), "ml": ml}
             if now - self._last_event > ROUND_IDLE_TIMEOUT:
                 self._finish_round_locked()
             self._last_event = now
 
-            is_hit = event not in NOT_A_HIT
             stats = self._stats
-            stats["totalHits"] += is_hit
+            stats["totalHits"] += 1
             stats["totalMl"] = round(stats["totalMl"] + ml, 1)
             stats["byEvent"][event] = stats["byEvent"].get(event, 0) + 1
             stats["ticker"] = [entry, *stats["ticker"]][:TICKER_LENGTH]
 
             p = self._round.setdefault(str(player), {"hits": 0, "ml": 0.0})
-            p["hits"] += is_hit
+            p["hits"] += 1
             p["ml"] = round(p["ml"] + ml, 1)
 
             record = stats["record"]
@@ -238,18 +235,6 @@ class Dashboard:
             self._latest = entry
             self._save_locked()
             self._broadcast_locked()
-
-    def _extend_held_locked(self, event: str, player: int, ml: float) -> None:
-        """Add the pump time of a held event without counting it again."""
-        self._stats["totalMl"] = round(self._stats["totalMl"] + ml, 1)
-        p = self._round.setdefault(str(player), {"hits": 0, "ml": 0.0})
-        p["ml"] = round(p["ml"] + ml, 1)
-        for entry in self._stats["ticker"]:
-            if entry["player"] == player and entry["event"] == event:
-                entry["ml"] = round(entry["ml"] + ml, 1)
-                break
-        # Not saved: arrives every frame while held, spare the SD card.
-        self._broadcast_locked()
 
     def check_new_day(self) -> None:
         with self._lock:
