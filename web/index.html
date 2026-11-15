@@ -97,6 +97,26 @@
   #flash .who { font-family: var(--pixel); font-size: 2.6em; margin-top: .4em; }
   #flash .what { font-size: 2.4em; font-weight: 800; margin-top: .4em; }
   #flash .ml { font-family: var(--pixel); font-size: 2em; color: var(--accent); margin-top: .6em; }
+
+  @media (max-width: 800px) {
+    html, body { height: auto; }
+    body { overflow: auto; font-size: 15px; }
+    .wrap { height: auto; padding: 16px; gap: 14px; }
+    h1 { font-size: 1.45em; }
+    .conn { font-size: .75em; }
+    .totals { gap: 8px; }
+    .stat { padding: .6em .7em; }
+    .stat .label { font-size: .62em; letter-spacing: .08em; }
+    .stat .value { font-size: 1em; white-space: nowrap; }
+    .ticker li { grid-template-columns: auto minmax(0, 1fr) auto; }
+    .ticker .t { display: none; }
+    main { grid-template-columns: 1fr; gap: 14px; }
+    footer { flex-direction: column; gap: .5em; }
+    #flash .big { font-size: 6em; }
+    #flash .who { font-size: 1.8em; }
+    #flash .what { font-size: 1.5em; padding: 0 16px; }
+    #flash .ml { font-size: 1.4em; }
+  }
 </style>
 </head>
 <body>
