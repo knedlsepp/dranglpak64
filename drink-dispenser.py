@@ -80,7 +80,7 @@ EVENT_DELAYS: dict[str, float] = {
 
 # drangl-dashboard listens here for dispensed drinks and race progress.
 DASHBOARD_ADDR: tuple[str, int] = ("127.0.0.1", 6464)
-DASHBOARD_ONLY_EVENTS: set[str] = {"race_start", "race_finish", "battle_out", "battle_win"}
+DASHBOARD_ONLY_EVENTS: set[str] = {"race_start", "race_finish", "battle_out", "battle_win", "audience_steal"}
 
 GPIO_CHIP: str = "/dev/gpiochip0"
 CONSUMER: str = "drink-dispenser"

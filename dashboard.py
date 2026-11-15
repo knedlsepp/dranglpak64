@@ -7,11 +7,18 @@ Receives JSON notifications via UDP (sent by drink-dispenser):
     {"event": "race_finish", "playerIndex": 2, "place": 1}
     {"event": "battle_out", "playerIndex": 2, "place": 3}
     {"event": "battle_win", "playerIndex": 1}
+    {"event": "audience_steal", "playerIndex": 1, "effect": "item"}  (or "none")
 race_start is also sent at the start of a battle.
 
 Serves a dashboard page on HTTP_PORT that updates live via a WebSocket
 (/ws). Where WebSockets don't get through, the page falls back to polling
 /state. Daily stats are persisted, so they survive restarts.
+
+Viewers can steal a player's item (POST /steal?player=N), which sends
+"steal N" to the game (see audience_poll() in nk64): harmless on purpose,
+it doesn't dispense a drink. They can also show a message on a player's
+screen (POST /say?to=N, or to=all, the text as body), sent as
+"say <N|*> <text>".
 
 Usage: drangl-dashboard <web dir>
 """
@@ -47,6 +54,15 @@ DAY_START_HOUR: int = 6
 NOT_A_HIT: set[str] = {"negroni_code"}
 # Sent every frame while the buttons are held: one press counts once.
 HELD_EVENTS: set[str] = {"negroni_code"}
+
+# Lines sent here end up in the game, via the stdin of `sc64deployer debug`
+AUDIENCE_ADDR: tuple[str, int] = ("127.0.0.1", 6465)
+AUDIENCE_PLAYERS: int = 4
+# What the game's debug font can display. Never "@": sc64deployer reads
+# "@path@" as a file to send.
+SAY_CHARACTERS: str = " !\"#%'()*+,-./0123456789:;<=>?ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz~"
+SAY_REPLACEMENTS: dict[str, str] = {"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"}
+SAY_MAX_LENGTH: int = 64
 
 WEBSOCKET_GUID: str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 # Keeps idle WebSockets open (Cloudflare drops them after 100 s of silence).
@@ -88,6 +104,7 @@ class Dashboard:
         self._seq = 0
         # Bumped on every change, lets polling clients skip unchanged state.
         self._version = 0
+        self._audience_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def _load(self) -> dict:
         try:
@@ -120,6 +137,31 @@ class Dashboard:
             self._finish_round_locked()
             self._last_event = time.monotonic()
             self._latest = None
+            self._broadcast_locked()
+
+    def steal(self, player: int) -> None:
+        """Have the game take away player's item."""
+        self._audience_sock.sendto(f"steal {player}\n".encode(), AUDIENCE_ADDR)
+        logging.info(f"Audience steals the item of player {player}")
+
+    def say(self, to: int | None, text: str) -> bool:
+        """Show a message on player to's screen, None for everyone's. False if
+        nothing is left of it."""
+        text = "".join(SAY_REPLACEMENTS.get(c, c) for c in text)
+        text = " ".join("".join(c if c in SAY_CHARACTERS else " " for c in text).split())[:SAY_MAX_LENGTH]
+        if not text:
+            return False
+        self._audience_sock.sendto(f"say {'*' if to is None else to} {text}\n".encode(), AUDIENCE_ADDR)
+        logging.info(f"Audience says to {'everyone' if to is None else f'player {to}'}: {text}")
+        with self._lock:
+            self._latest = {**self._next_entry_locked("audience_say", -1 if to is None else to), "text": text}
+            self._broadcast_locked()
+        return True
+
+    def audience_stole(self, player: int, effect: str) -> None:
+        """The game reports what stealing did."""
+        with self._lock:
+            self._latest = {**self._next_entry_locked("audience_steal", player), "effect": effect}
             self._broadcast_locked()
 
     def finish_race(self, event: str, player: int, place: int) -> None:
@@ -247,6 +289,8 @@ def udp_listener(dashboard: Dashboard) -> None:
                 dashboard.finish_race(event, int(data["playerIndex"]), int(data["place"]))
             elif event == "battle_win":
                 dashboard.finish_race(event, int(data["playerIndex"]), 1)
+            elif event == "audience_steal":
+                dashboard.audience_stole(int(data["playerIndex"]), str(data["effect"]))
             else:
                 dashboard.handle_drink(event, int(data["playerIndex"]), float(data["duration"]))
         except (ValueError, KeyError, TypeError):
@@ -309,6 +353,31 @@ def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> t
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+
+        def do_POST(self) -> None:
+            url = urllib.parse.urlsplit(self.path)
+            query = urllib.parse.parse_qs(url.query)
+            if url.path == "/say":
+                to = query.get("to", ["all"])[0]
+                length = min(int(self.headers.get("Content-Length", 0)), 1024)
+                text = self.rfile.read(length).decode("utf-8", errors="replace")
+                if to != "all" and not (to.isdigit() and int(to) < AUDIENCE_PLAYERS):
+                    self.send_error(404)
+                    return
+                self.send_response(204 if dashboard.say(None if to == "all" else int(to), text) else 400)
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
+            player = query.get("player", [""])[0]
+            if url.path != "/steal" or not player.isdigit() or int(player) >= AUDIENCE_PLAYERS:
+                self.send_error(404)
+                return
+            dashboard.steal(int(player))
+            self.send_response(204)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
         def _state(self, query: str) -> None:
             since = urllib.parse.parse_qs(query).get("since", ["-1"])[0]

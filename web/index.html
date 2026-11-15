@@ -40,7 +40,7 @@
   .wrap {
     height: 100%;
     display: grid;
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
     gap: 1.2em;
     padding: 1.4em 2em;
   }
@@ -97,6 +97,26 @@
   @keyframes slidein { from { transform: translateX(-1em); opacity: 0; } }
 
   footer { display: flex; justify-content: space-between; color: var(--muted); font-size: .9em; gap: 2em; }
+
+  .audience { display: grid; grid-template-columns: auto 1fr minmax(0, 30em); align-items: center; gap: .6em 1.2em; padding: .7em 1.2em; }
+  .audience-title { font-family: var(--display); font-size: 1.15em; }
+  .audience-hint { color: var(--muted); font-size: .85em; }
+  .steal-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5em; }
+  .audience button {
+    font: inherit; font-family: var(--display); font-size: 1.1em; padding: .55em .6em .4em; border-radius: .5em; cursor: pointer;
+    border: 0; color: #0b0c10; background: var(--pc, var(--accent));
+    box-shadow: inset 0 -.2em 0 rgba(0, 0, 0, .25), inset 0 .15em 0 rgba(255, 255, 255, .35);
+  }
+  .audience button small { display: block; font-family: var(--sans); font-size: .62em; font-weight: 700; margin-top: .15em; }
+  .say { grid-column: 1 / -1; display: flex; gap: .5em; }
+  .say select { font: inherit; color: var(--text); background: #0b0d12; border: 1px solid var(--line); border-radius: .5em; padding: .5em; }
+  .say input {
+    flex: 1; min-width: 0; font: inherit; color: var(--text); background: #0b0d12; border: 1px solid var(--line);
+    border-radius: .5em; padding: .5em .8em;
+  }
+  .say input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .audience-feedback { grid-column: 1 / -1; font-size: .9em; color: var(--accent); }
+  .audience-feedback:empty { display: none; }
   footer b { color: var(--accent); }
 
   #flash {
@@ -113,12 +133,17 @@
   #flash .ml { font-family: var(--display); font-size: 2.6em; margin-top: .4em; display: inline-block; }
 
   @media (max-width: 800px) {
+    .audience { display: block; padding: .9em 1em; }
+    .audience-hint { margin: .3em 0 .8em; }
+    .say { margin-top: .7em; }
+    .audience-feedback { margin-top: .6em; }
     html, body { height: auto; }
     body { overflow: auto; font-size: 15px; }
-    .wrap { height: auto; padding: 16px; gap: 14px; }
+    .wrap { height: auto; padding: 16px; gap: 14px; grid-template-rows: none; }
     h1 { flex-direction: column; align-items: flex-start; gap: .3em; }
     h1 img { height: auto; width: min(70vw, 320px); }
-    h1 small { font-size: .62em; letter-spacing: .08em; padding: 0; }
+    h1 { font-size: 1em; }
+    h1 small { font-size: .8em; letter-spacing: .12em; padding: 0; }
     .conn { font-size: .75em; align-self: flex-start; }
     .totals { gap: 8px; }
     .stat { padding: .6em .7em; }
@@ -141,6 +166,18 @@
     <h1><img src="/logo.svg" alt="DranglPak64"><small>HALL OF SHAME · ROBOEXOTICA</small></h1>
     <div class="conn" id="conn">verbinde…</div>
   </header>
+
+  <section class="audience">
+    <div class="audience-title">📣 Publikum</div>
+    <div class="audience-hint">Stiehl den Spielern ihr Item oder schick ihnen eine Nachricht auf den Bildschirm. Kein Drink.</div>
+    <div class="steal-buttons" id="steal-buttons"></div>
+    <form class="say" id="say">
+      <select id="say-to" aria-label="Empfänger"></select>
+      <input id="say-text" maxlength="64" autocomplete="off" placeholder="Nachricht an die Spieler…">
+      <button type="submit">💬 Senden</button>
+    </form>
+    <div class="audience-feedback" id="audience-feedback"></div>
+  </section>
 
   <div class="totals">
     <div class="stat"><div class="label">Heute gezapft</div><div class="value fire" id="ml">0 ml</div></div>
@@ -211,6 +248,16 @@ function setValue(el, text) {
   el.classList.add("bump");
 }
 
+function renderStealButtons() {
+  const players = 4;
+  $("steal-buttons").innerHTML = [...Array(players).keys()].map(p =>
+    `<button data-p="${p}" style="--pc:${color(p)}">P${p + 1}<small>Item stehlen</small></button>`).join("");
+  const to = $("say-to").value;
+  $("say-to").innerHTML = `<option value="all">An alle</option>` +
+    [...Array(players).keys()].map(p => `<option value="${p}">An P${p + 1}</option>`).join("");
+  if ([...$("say-to").options].some(o => o.value === to)) $("say-to").value = to;
+}
+
 function render(s) {
   setValue($("ml"), fmtMl(s.totalMl));
   setValue($("hits"), String(s.totalHits));
@@ -249,21 +296,48 @@ function render(s) {
     : "Noch kein Rekord – wer traut sich?") + yesterday;
 }
 
+renderStealButtons();
+
+async function post(url, body, done, failed) {
+  try {
+    const r = await fetch(url, { method: "POST", body });
+    $("audience-feedback").textContent = r.ok ? done : failed;
+  } catch (e) {
+    $("audience-feedback").textContent = "Hat nicht geklappt, nochmal probieren.";
+  }
+}
+
+$("steal-buttons").addEventListener("click", ev => {
+  const btn = ev.target.closest("button");
+  if (btn) post(`/steal?player=${btn.dataset.p}`, null, `🫳 Ab damit, P${Number(btn.dataset.p) + 1}!`, "Hat nicht geklappt.");
+});
+
+$("say").addEventListener("submit", ev => {
+  ev.preventDefault();
+  const text = $("say-text").value.trim();
+  if (!text) return;
+  $("say-text").value = "";
+  post(`/say?to=${$("say-to").value}`, text, "💬 Gesendet!", "Nur Buchstaben, Zahlen und Satzzeichen, bitte.");
+});
+
 let lastFlash = null, flashTimer = null;
 function flash(t) {
   if (!t || t.id === lastFlash) return;
   lastFlash = t.id;
   const finish = t.place !== undefined;
+  const audience = t.event.startsWith("audience_");
   const [emoji, name] = {
     race_finish: ["🏁", `Im Ziel – Platz ${t.place}!`],
     battle_out:  ["🎈", `Alle Ballons weg – Platz ${t.place}`],
     battle_win:  ["🏆", "Battle gewonnen!"],
+    audience_steal: t.effect === "item" ? ["🫳", "Item gestohlen!"] : ["🍀", "Glück gehabt – nichts zu holen"],
+    audience_say: ["💬", `„${t.text}“`],
   }[t.event] || describe(t.event);
   $("f-emoji").textContent = emoji;
-  $("f-who").textContent = `P${t.player + 1}`;
-  $("f-who").style.color = color(t.player);
+  $("f-who").textContent = t.player >= 0 ? (t.event === "audience_say" ? `→ P${t.player + 1}` : `P${t.player + 1}`) : "";
+  $("f-who").style.color = t.player >= 0 ? color(t.player) : "";
   $("f-what").textContent = name;
-  $("f-ml").textContent = finish ? placeLabel(t.place) : `+${fmtMl(t.ml)}`;
+  $("f-ml").textContent = audience ? "📣 PUBLIKUM" : finish ? placeLabel(t.place) : `+${fmtMl(t.ml)}`;
   $("flash").classList.add("show");
   clearTimeout(flashTimer);
   flashTimer = setTimeout(() => $("flash").classList.remove("show"), 2200);
