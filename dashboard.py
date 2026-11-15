@@ -3,12 +3,14 @@ drangl-dashboard — Live "Hall of Shame" for the dranglpak64 drink dispenser.
 
 Receives JSON notifications via UDP (sent by drink-dispenser):
     {"event": "hit_banana", "playerIndex": 2, "duration": 1.5}  (dispensed drink)
-    {"event": "race_start"}
+    {"event": "race_start", "mode": 3, "players": 2, "characters": [0, 4, -1, -1]}
     {"event": "race_finish", "playerIndex": 2, "place": 1}
     {"event": "battle_out", "playerIndex": 2, "place": 3}
     {"event": "battle_win", "playerIndex": 1}
     {"event": "audience_steal", "playerIndex": 1, "effect": "item"}  (or "none")
-race_start is also sent at the start of a battle.
+race_start is also sent at the start of a battle. mode: 0 Grand Prix,
+1 Time Trials, 2 Versus, 3 Battle. characters (of the human players)
+also determine the colour of their battle balloons, which the page uses.
 
 Serves a dashboard page on HTTP_PORT that updates live via a WebSocket
 (/ws). Where WebSockets don't get through, the page falls back to polling
@@ -98,6 +100,9 @@ class Dashboard:
         self._round: dict[str, dict] = {}
         self._last_event = 0.0
         self._latest: dict | None = None
+        # Of the current race: "mode", "players", "characters". Unknown until
+        # the first race_start after a restart.
+        self._game: dict | None = None
         # Mirror of the dispenser's pumps, to count actual pump time.
         self._pump_until: dict[int, float] = {}
         self._last_drink: dict[int, str] = {}
@@ -118,7 +123,19 @@ class Dashboard:
         os.replace(tmp, STATE_FILE)
 
     def _snapshot_locked(self) -> dict:
-        return {**self._stats, "round": self._round, "latest": self._latest, "version": self._version}
+        return {
+            **self._stats,
+            "round": self._round,
+            "latest": self._latest,
+            "game": self._game,
+            "version": self._version,
+        }
+
+    def _character_locked(self, player: int) -> int | None:
+        if self._game is None or not 0 <= player < len(self._game["characters"]):
+            return None
+        character = self._game["characters"][player]
+        return character if character >= 0 else None
 
     def _finish_round_locked(self) -> None:
         self._round = {}
@@ -128,13 +145,18 @@ class Dashboard:
         return {
             "t": time.strftime("%H:%M:%S"),
             "player": player,
+            # Keeps the right colour after the next race with other characters
+            "character": self._character_locked(player),
             "event": event,
             "id": self._seq,
         }
 
-    def start_race(self) -> None:
+    def start_race(self, mode: int, players: int, characters: list[int]) -> None:
         with self._lock:
             self._finish_round_locked()
+            self._game = {"mode": mode, "players": players, "characters": characters}
+            # List everyone playing, also before their first hit
+            self._round = {str(p): {"hits": 0, "ml": 0.0} for p in range(players)}
             self._last_event = time.monotonic()
             self._latest = None
             self._broadcast_locked()
@@ -206,7 +228,12 @@ class Dashboard:
 
             record = stats["record"]
             if record is None or p["hits"] > record["hits"]:
-                stats["record"] = {"hits": p["hits"], "player": player, "at": time.strftime("%H:%M")}
+                stats["record"] = {
+                    "hits": p["hits"],
+                    "player": player,
+                    "character": self._character_locked(player),
+                    "at": time.strftime("%H:%M"),
+                }
 
             self._latest = entry
             self._save_locked()
@@ -284,7 +311,8 @@ def udp_listener(dashboard: Dashboard) -> None:
             data = json.loads(raw)
             event = str(data["event"])
             if event == "race_start":
-                dashboard.start_race()
+                characters = [int(c) for c in data.get("characters", [])]
+                dashboard.start_race(int(data.get("mode", -1)), int(data.get("players", len(characters))), characters)
             elif event in ("race_finish", "battle_out"):
                 dashboard.finish_race(event, int(data["playerIndex"]), int(data["place"]))
             elif event == "battle_win":

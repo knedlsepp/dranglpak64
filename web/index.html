@@ -236,7 +236,16 @@ const COLORS = ["#ff5d5d", "#4fc3ff", "#7dff6a", "#ffd23f", "#c38bff", "#ff9a3c"
 
 const $ = id => document.getElementById(id);
 const describe = e => EVENTS[e] || ["❓", e];
-const color = p => COLORS[p % COLORS.length];
+// Battle balloon colours by character, from render_battle_balloon() in nk64,
+// brightened for the screen
+const CHARACTER_COLORS = ["#ff2a1a", "#2bdc3c", "#22ffab", "#00cbff", "#ffc200", "#f7ff00", "#ff5e4d", "#a46bff"];
+// The current race, see race_start
+let game = null;
+// character: as stored with an entry, else the current race's
+const color = (p, character) => {
+  const c = character ?? (game ? game.characters[p] : null);
+  return c != null && c >= 0 ? CHARACTER_COLORS[c] : COLORS[p % COLORS.length];
+};
 const fmtMl = ml => `${Math.round(ml).toLocaleString("de-AT")} ml`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -248,8 +257,13 @@ function setValue(el, text) {
   el.classList.add("bump");
 }
 
+let stealButtonsFor = null;
 function renderStealButtons() {
-  const players = 4;
+  const players = game ? game.players : 4;
+  const key = JSON.stringify(game);
+  if (key === stealButtonsFor) return;
+  stealButtonsFor = key;
+  $("steal-buttons").style.gridTemplateColumns = `repeat(${players}, 1fr)`;
   $("steal-buttons").innerHTML = [...Array(players).keys()].map(p =>
     `<button data-p="${p}" style="--pc:${color(p)}">P${p + 1}<small>Item stehlen</small></button>`).join("");
   const to = $("say-to").value;
@@ -259,6 +273,8 @@ function renderStealButtons() {
 }
 
 function render(s) {
+  game = s.game;
+  renderStealButtons();
   setValue($("ml"), fmtMl(s.totalMl));
   setValue($("hits"), String(s.totalHits));
   setValue($("negroni"), String(s.byEvent.negroni_code || 0));
@@ -284,7 +300,7 @@ function render(s) {
 
   $("ticker").innerHTML = s.ticker.map(t => {
     const [emoji, name] = describe(t.event);
-    return `<li><span class="t">${esc(t.t)}</span><span class="who" style="background:${color(t.player)}">P${t.player + 1}</span>
+    return `<li><span class="t">${esc(t.t)}</span><span class="who" style="background:${color(t.player, t.character)}">P${t.player + 1}</span>
       <span class="what">${emoji} ${esc(name)}</span><span class="ml">+${fmtMl(t.ml)}</span></li>`;
   }).join("");
 
@@ -335,7 +351,7 @@ function flash(t) {
   }[t.event] || describe(t.event);
   $("f-emoji").textContent = emoji;
   $("f-who").textContent = t.player >= 0 ? (t.event === "audience_say" ? `→ P${t.player + 1}` : `P${t.player + 1}`) : "";
-  $("f-who").style.color = t.player >= 0 ? color(t.player) : "";
+  $("f-who").style.color = t.player >= 0 ? color(t.player, t.character) : "";
   $("f-what").textContent = name;
   $("f-ml").textContent = audience ? "📣 PUBLIKUM" : finish ? placeLabel(t.place) : `+${fmtMl(t.ml)}`;
   $("flash").classList.add("show");
