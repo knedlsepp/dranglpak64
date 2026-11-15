@@ -7,30 +7,36 @@
 <style>
   /* Served by the Pi itself: visitors on the hotspot have no internet. */
   @font-face {
-    font-family: "Press Start 2P";
-    src: url("/PressStart2P-Regular.ttf") format("truetype");
+    font-family: "Russo One";
+    src: url("/RussoOne-Regular.ttf") format("truetype");
     font-display: swap;
   }
   :root {
-    --bg: #12091f;
-    --panel: #1e1233;
-    --line: #3a2660;
-    --text: #f4ecff;
-    --muted: #a493c4;
-    --accent: #ffd23f;
-    --hot: #ff4f8b;
-    --pixel: "Press Start 2P", ui-monospace, monospace;
+    --bg: #07080b;
+    --panel: #11141a;
+    --line: #262b36;
+    --text: #eef1f6;
+    --muted: #8a93a6;
+    --accent: #ffb000;
+    --hot: #ff5a1f;
+    /* Same as the logo (swag/make_swag.py) */
+    --chrome: linear-gradient(180deg, #ffffff 0%, #dfe4ee 25%, #8a93a6 50%, #f4f6fb 55%, #6b7280 100%);
+    --fire: linear-gradient(180deg, #ffb000 0%, #d91e1e 100%);
+    --display: "Russo One", system-ui, sans-serif;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; }
   body {
-    background: radial-gradient(ellipse at top, #2a1450 0%, var(--bg) 60%);
+    background: radial-gradient(ellipse at top, #1a1f2b 0%, var(--bg) 65%);
     color: var(--text);
     font-family: var(--sans);
     font-size: clamp(14px, 1.15vw, 28px);
     overflow: hidden;
   }
+  .chrome, .fire { -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .chrome { background-image: var(--chrome); }
+  .fire { background-image: var(--fire); }
   .wrap {
     height: 100%;
     display: grid;
@@ -38,30 +44,37 @@
     gap: 1.2em;
     padding: 1.4em 2em;
   }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 1em; }
-  h1 { font-family: var(--pixel); font-size: 2.2em; color: var(--accent); letter-spacing: .05em;
-       text-shadow: .12em .12em 0 var(--hot); }
-  h1 small { display: block; font-size: .38em; color: var(--muted); text-shadow: none; margin-top: .8em; letter-spacing: .2em; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+  h1 { display: flex; align-items: flex-end; gap: 1em; }
+  h1 img { height: 3.4em; display: block; }
+  h1 small { font-family: var(--display); font-weight: 400; font-size: .75em; color: var(--muted); letter-spacing: .2em; padding-bottom: .5em; }
   .conn { font-size: .8em; color: var(--muted); }
   .conn.off { color: var(--hot); }
 
   .totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2em; }
-  .stat { background: var(--panel); border: 2px solid var(--line); border-radius: .6em; padding: .8em 1.2em; }
+  .stat, section {
+    background: linear-gradient(180deg, #161a22 0%, var(--panel) 100%);
+    border: 1px solid var(--line); border-radius: .6em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 .4em 1.2em rgba(0, 0, 0, .4);
+  }
+  .stat { padding: .8em 1.2em; }
   .stat .label { color: var(--muted); text-transform: uppercase; letter-spacing: .15em; font-size: .8em; }
-  .stat .value { font-family: var(--pixel); font-size: 2.4em; margin-top: .35em; color: var(--accent); }
+  .stat .value { font-family: var(--display); font-size: 3em; line-height: 1.1; margin-top: .15em; display: inline-block; }
   .stat .value.bump { animation: bump .5s ease-out; }
-  @keyframes bump { 30% { transform: scale(1.15); color: var(--hot); } }
+  @keyframes bump { 30% { transform: scale(1.12); filter: drop-shadow(0 0 .3em var(--hot)); } }
 
   main { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 1.2em; min-height: 0; }
-  section { background: var(--panel); border: 2px solid var(--line); border-radius: .6em; padding: 1em 1.2em; min-height: 0; overflow: hidden; }
-  h2 { font-family: var(--pixel); font-size: .85em; color: var(--muted); margin-bottom: 1em; letter-spacing: .1em; }
+  section { padding: 1em 1.2em; min-height: 0; overflow: hidden; }
+  h2 { font-family: var(--display); font-weight: 400; font-size: 1em; color: var(--muted); margin-bottom: 1em; letter-spacing: .12em; }
 
   .players { display: grid; gap: .7em; }
   .player { display: grid; grid-template-columns: 3.2em 1fr auto 2em; align-items: center; gap: .8em; }
   .player .place { font-size: 1.5em; text-align: center; }
-  .badge { font-family: var(--pixel); font-size: .9em; text-align: center; padding: .55em 0; border-radius: .4em; color: #12091f; }
-  .bar { height: 1.6em; background: #2c1d48; border-radius: .4em; overflow: hidden; }
-  .bar > div { height: 100%; border-radius: .4em; transition: width .4s ease-out; }
+  .badge { font-family: var(--display); font-size: 1em; text-align: center; padding: .4em 0; border-radius: .4em; color: #0b0c10;
+           box-shadow: inset 0 -.2em 0 rgba(0, 0, 0, .25), inset 0 .15em 0 rgba(255, 255, 255, .35); }
+  .bar { height: 1.6em; background: #1b1f28; border-radius: .4em; overflow: hidden; box-shadow: inset 0 .1em .3em rgba(0, 0, 0, .5); }
+  .bar > div { height: 100%; border-radius: .4em; transition: width .4s ease-out;
+               background-image: linear-gradient(180deg, rgba(255, 255, 255, .35) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, .2) 100%); }
   .player .nums { font-weight: 800; white-space: nowrap; min-width: 6.5em; text-align: right; }
   .player .nums span { color: var(--muted); font-weight: 500; }
   .empty { color: var(--muted); font-style: italic; }
@@ -70,16 +83,16 @@
   .cause { display: grid; grid-template-columns: 1.8em 1fr auto; align-items: center; gap: .6em; }
   .cause .emoji { font-size: 1.3em; }
   .cause .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .cause .n { font-family: var(--pixel); font-size: .85em; color: var(--accent); }
-  .cause .track { grid-column: 2 / 4; height: .35em; background: #2c1d48; border-radius: .2em; margin-top: -.3em; }
-  .cause .track > div { height: 100%; background: var(--hot); border-radius: .2em; transition: width .4s; }
+  .cause .n { font-family: var(--display); font-size: 1.1em; color: var(--accent); }
+  .cause .track { grid-column: 2 / 4; height: .35em; background: #1b1f28; border-radius: .2em; margin-top: -.3em; }
+  .cause .track > div { height: 100%; background-image: linear-gradient(90deg, #d91e1e, #ffb000); border-radius: .2em; transition: width .4s; }
 
   .ticker { list-style: none; padding: 0; display: grid; gap: .5em; }
   .ticker li { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: .6em; align-items: center; }
   .ticker .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ticker li:first-child { animation: slidein .4s ease-out; }
   .ticker .t { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .85em; }
-  .ticker .who { font-family: var(--pixel); font-size: .7em; padding: .35em .4em; border-radius: .3em; color: #12091f; }
+  .ticker .who { font-family: var(--display); font-size: .8em; padding: .2em .45em; border-radius: .3em; color: #0b0c10; }
   .ticker .ml { color: var(--accent); font-weight: 800; }
   @keyframes slidein { from { transform: translateX(-1em); opacity: 0; } }
 
@@ -88,48 +101,51 @@
 
   #flash {
     position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none;
-    background: rgba(18, 9, 31, .78); opacity: 0; transition: opacity .25s;
+    background: radial-gradient(ellipse at center, rgba(26, 31, 43, .9) 0%, rgba(7, 8, 11, .94) 70%);
+    opacity: 0; transition: opacity .25s;
   }
   #flash.show { opacity: 1; }
   #flash .card { text-align: center; transform: scale(.6); transition: transform .35s cubic-bezier(.2, 1.6, .4, 1); }
   #flash.show .card { transform: scale(1); }
   #flash .big { font-size: 9em; line-height: 1; }
-  #flash .who { font-family: var(--pixel); font-size: 2.6em; margin-top: .4em; }
-  #flash .what { font-size: 2.4em; font-weight: 800; margin-top: .4em; }
-  #flash .ml { font-family: var(--pixel); font-size: 2em; color: var(--accent); margin-top: .6em; }
+  #flash .who { font-family: var(--display); font-size: 3.2em; margin-top: .3em; }
+  #flash .what { font-family: var(--display); font-weight: 400; font-size: 2.4em; margin-top: .3em; }
+  #flash .ml { font-family: var(--display); font-size: 2.6em; margin-top: .4em; display: inline-block; }
 
   @media (max-width: 800px) {
     html, body { height: auto; }
     body { overflow: auto; font-size: 15px; }
     .wrap { height: auto; padding: 16px; gap: 14px; }
-    h1 { font-size: 1.45em; }
-    .conn { font-size: .75em; }
+    h1 { flex-direction: column; align-items: flex-start; gap: .3em; }
+    h1 img { height: auto; width: min(70vw, 320px); }
+    h1 small { font-size: .62em; letter-spacing: .08em; padding: 0; }
+    .conn { font-size: .75em; align-self: flex-start; }
     .totals { gap: 8px; }
     .stat { padding: .6em .7em; }
     .stat .label { font-size: .62em; letter-spacing: .08em; }
-    .stat .value { font-size: 1em; white-space: nowrap; }
+    .stat .value { font-size: 1.4em; white-space: nowrap; }
     .ticker li { grid-template-columns: auto minmax(0, 1fr) auto; }
     .ticker .t { display: none; }
     main { grid-template-columns: 1fr; gap: 14px; }
     footer { flex-direction: column; gap: .5em; }
     #flash .big { font-size: 6em; }
-    #flash .who { font-size: 1.8em; }
+    #flash .who { font-size: 2em; }
     #flash .what { font-size: 1.5em; padding: 0 16px; }
-    #flash .ml { font-size: 1.4em; }
+    #flash .ml { font-size: 1.6em; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>DRANGLPAK64<small>HALL OF SHAME · ROBOEXOTICA</small></h1>
+    <h1><img src="/logo.svg" alt="DranglPak64"><small>HALL OF SHAME · ROBOEXOTICA</small></h1>
     <div class="conn" id="conn">verbinde…</div>
   </header>
 
   <div class="totals">
-    <div class="stat"><div class="label">Heute gezapft</div><div class="value" id="ml">0 ml</div></div>
-    <div class="stat"><div class="label">Treffer heute</div><div class="value" id="hits">0</div></div>
-    <div class="stat"><div class="label">Negroni-Codes geknackt</div><div class="value" id="negroni">0</div></div>
+    <div class="stat"><div class="label">Heute gezapft</div><div class="value fire" id="ml">0 ml</div></div>
+    <div class="stat"><div class="label">Treffer heute</div><div class="value chrome" id="hits">0</div></div>
+    <div class="stat"><div class="label">Negroni-Codes geknackt</div><div class="value chrome" id="negroni">0</div></div>
   </div>
 
   <main>
@@ -157,7 +173,7 @@
   <div class="big" id="f-emoji"></div>
   <div class="who" id="f-who"></div>
   <div class="what" id="f-what"></div>
-  <div class="ml" id="f-ml"></div>
+  <div class="ml fire" id="f-ml"></div>
 </div></div>
 
 <script>
