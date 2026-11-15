@@ -128,6 +128,7 @@
     };
   };
   networking.hostName = "dranglpak64";
+  time.timeZone = "Europe/Vienna";
   users = {
     users.root = {
       openssh.authorizedKeys.keys = [
