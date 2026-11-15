@@ -250,11 +250,42 @@ function flash(t) {
   flashTimer = setTimeout(() => $("flash").classList.remove("show"), 2200);
 }
 
+function setOnline(online) {
+  $("conn").textContent = online ? "● live" : "● offline – verbinde neu…";
+  $("conn").classList.toggle("off", !online);
+}
+
 function connect() {
-  const es = new EventSource("/events");
-  es.onopen = () => { $("conn").textContent = "● live"; $("conn").classList.remove("off"); };
-  es.onerror = () => { $("conn").textContent = "● offline – verbinde neu…"; $("conn").classList.add("off"); };
-  es.onmessage = m => { const s = JSON.parse(m.data); render(s); flash(s.latest); };
+  let gotData = false;
+  const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`);
+  ws.onmessage = m => { gotData = true; setOnline(true); const s = JSON.parse(m.data); render(s); flash(s.latest); };
+  ws.onclose = () => {
+    setOnline(false);
+    // Reconnect a working WebSocket; poll where WebSockets don't get through.
+    if (gotData) setTimeout(connect, 2000);
+    else poll();
+  };
+  setTimeout(() => { if (!gotData) ws.close(); }, 5000);
+}
+
+async function poll() {
+  let version = -1;
+  for (;;) {
+    try {
+      const r = await fetch(`/state?since=${version}`, { cache: "no-store" });
+      if (r.status === 200) {
+        const s = await r.json();
+        // Don't replay an old flash animation on the first load.
+        if (version !== -1) flash(s.latest);
+        version = s.version;
+        render(s);
+      }
+      setOnline(r.ok);
+    } catch (e) {
+      setOnline(false);
+    }
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
 }
 connect();
 </script>

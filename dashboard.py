@@ -9,12 +9,15 @@ Receives JSON notifications via UDP (sent by drink-dispenser):
     {"event": "battle_win", "playerIndex": 1}
 race_start is also sent at the start of a battle.
 
-Serves a dashboard page on HTTP_PORT that updates live via Server-Sent
-Events. Daily stats are persisted, so they survive restarts.
+Serves a dashboard page on HTTP_PORT that updates live via a WebSocket
+(/ws). Where WebSockets don't get through, the page falls back to polling
+/state. Daily stats are persisted, so they survive restarts.
 
 Usage: drangl-dashboard <web dir>
 """
 
+import base64
+import hashlib
 import http.server
 import json
 import logging
@@ -24,6 +27,7 @@ import socket
 import sys
 import threading
 import time
+import urllib.parse
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +44,10 @@ TICKER_LENGTH: int = 12
 NOT_A_HIT: set[str] = {"negroni_code"}
 # Sent every frame while the buttons are held: one press counts once.
 HELD_EVENTS: set[str] = {"negroni_code"}
+
+WEBSOCKET_GUID: str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+# Keeps idle WebSockets open (Cloudflare drops them after 100 s of silence).
+WEBSOCKET_KEEPALIVE: float = 15.0
 
 STATE_FILE: Path = Path(os.environ.get("STATE_DIRECTORY", ".")) / "stats.json"
 
@@ -68,6 +76,8 @@ class Dashboard:
         self._pump_until: dict[int, float] = {}
         self._last_drink: dict[int, str] = {}
         self._seq = 0
+        # Bumped on every change, lets polling clients skip unchanged state.
+        self._version = 0
 
     def _load(self) -> dict:
         try:
@@ -81,7 +91,7 @@ class Dashboard:
         os.replace(tmp, STATE_FILE)
 
     def _snapshot_locked(self) -> dict:
-        return {**self._stats, "round": self._round, "latest": self._latest}
+        return {**self._stats, "round": self._round, "latest": self._latest, "version": self._version}
 
     def _finish_round_locked(self) -> None:
         self._round = {}
@@ -171,6 +181,7 @@ class Dashboard:
                 self._broadcast_locked()
 
     def _broadcast_locked(self) -> None:
+        self._version += 1
         snapshot = self._snapshot_locked()
         for q in list(self._clients):
             try:
@@ -186,6 +197,13 @@ class Dashboard:
             q.put_nowait({**self._snapshot_locked(), "latest": None})
             self._clients.append(q)
         return q
+
+    def poll(self, since: int) -> dict | None:
+        """Current snapshot, or None if nothing changed since that version."""
+        with self._lock:
+            if since == self._version:
+                return None
+            return self._snapshot_locked()
 
     def unsubscribe(self, q: queue.Queue) -> None:
         with self._lock:
@@ -235,11 +253,30 @@ def load_web_files(web_dir: Path) -> dict[str, tuple[str, bytes]]:
     }
 
 
+def websocket_frame(opcode: int, payload: bytes) -> bytes:
+    """A single unmasked (server to client) WebSocket frame."""
+    n = len(payload)
+    if n < 126:
+        header = bytes([0x80 | opcode, n])
+    elif n < 1 << 16:
+        header = bytes([0x80 | opcode, 126]) + n.to_bytes(2, "big")
+    else:
+        header = bytes([0x80 | opcode, 127]) + n.to_bytes(8, "big")
+    return header + payload
+
+
 def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> type:
     class Handler(http.server.BaseHTTPRequestHandler):
+        # WebSocket upgrades require HTTP/1.1
+        protocol_version = "HTTP/1.1"
+
         def do_GET(self) -> None:
-            if self.path == "/events":
-                self._stream()
+            url = urllib.parse.urlsplit(self.path)
+            if url.path == "/ws":
+                self._websocket()
+                return
+            if url.path == "/state":
+                self._state(url.query)
                 return
             # Any unknown path gets the dashboard, so captive portal checks of
             # phones land there too.
@@ -250,19 +287,45 @@ def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> t
             self.end_headers()
             self.wfile.write(body)
 
-        def _stream(self) -> None:
+        def _state(self, query: str) -> None:
+            since = urllib.parse.parse_qs(query).get("since", ["-1"])[0]
+            snapshot = dashboard.poll(int(since) if since.lstrip("-").isdigit() else -1)
+            if snapshot is None:
+                self.send_response(204)
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                return
+            body = json.dumps(snapshot).encode()
             self.send_response(200)
-            self.send_header("Content-Type", "text/event-stream")
-            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
+            self.wfile.write(body)
+
+        def _websocket(self) -> None:
+            key = self.headers.get("Sec-WebSocket-Key")
+            if key is None or self.headers.get("Upgrade", "").lower() != "websocket":
+                self.send_error(400)
+                return
+            accept = base64.b64encode(hashlib.sha1((key + WEBSOCKET_GUID).encode()).digest())
+            self.send_response(101)
+            self.send_header("Upgrade", "websocket")
+            self.send_header("Connection", "Upgrade")
+            self.send_header("Sec-WebSocket-Accept", accept.decode())
+            self.end_headers()
+            self.close_connection = True
+            # Only ever sends: browsers send nothing but a close frame, and a
+            # gone browser shows up as failing write.
             q = dashboard.subscribe()
             try:
                 while True:
                     try:
-                        chunk = f"data: {json.dumps(q.get(timeout=15))}\n\n"
+                        frame = websocket_frame(0x1, json.dumps(q.get(timeout=WEBSOCKET_KEEPALIVE)).encode())
                     except queue.Empty:
-                        chunk = ": keepalive\n\n"
-                    self.wfile.write(chunk.encode())
+                        # Unsolicited pong: a heartbeat browsers don't answer
+                        frame = websocket_frame(0xA, b"")
+                    self.wfile.write(frame)
                     self.wfile.flush()
             except (BrokenPipeError, ConnectionResetError):
                 pass
