@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dranglpak64 · Hall of Shame</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12091f;
+    --panel: #1e1233;
+    --line: #3a2660;
+    --text: #f4ecff;
+    --muted: #a493c4;
+    --accent: #ffd23f;
+    --hot: #ff4f8b;
+    --pixel: "Press Start 2P", ui-monospace, monospace;
+    --sans: "Rubik", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(ellipse at top, #2a1450 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: clamp(14px, 1.15vw, 28px);
+    overflow: hidden;
+  }
+  .wrap {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 1.2em;
+    padding: 1.4em 2em;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 1em; }
+  h1 { font-family: var(--pixel); font-size: 2.2em; color: var(--accent); letter-spacing: .05em;
+       text-shadow: .12em .12em 0 var(--hot); }
+  h1 small { display: block; font-size: .38em; color: var(--muted); text-shadow: none; margin-top: .8em; letter-spacing: .2em; }
+  .conn { font-size: .8em; color: var(--muted); }
+  .conn.off { color: var(--hot); }
+
+  .totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2em; }
+  .stat { background: var(--panel); border: 2px solid var(--line); border-radius: .6em; padding: .8em 1.2em; }
+  .stat .label { color: var(--muted); text-transform: uppercase; letter-spacing: .15em; font-size: .8em; }
+  .stat .value { font-family: var(--pixel); font-size: 2.4em; margin-top: .35em; color: var(--accent); }
+  .stat .value.bump { animation: bump .5s ease-out; }
+  @keyframes bump { 30% { transform: scale(1.15); color: var(--hot); } }
+
+  main { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 1.2em; min-height: 0; }
+  section { background: var(--panel); border: 2px solid var(--line); border-radius: .6em; padding: 1em 1.2em; min-height: 0; overflow: hidden; }
+  h2 { font-family: var(--pixel); font-size: .85em; color: var(--muted); margin-bottom: 1em; letter-spacing: .1em; }
+
+  .players { display: grid; gap: .7em; }
+  .player { display: grid; grid-template-columns: 3.2em 1fr auto 2em; align-items: center; gap: .8em; }
+  .player .place { font-size: 1.5em; text-align: center; }
+  .badge { font-family: var(--pixel); font-size: .9em; text-align: center; padding: .55em 0; border-radius: .4em; color: #12091f; }
+  .bar { height: 1.6em; background: #2c1d48; border-radius: .4em; overflow: hidden; }
+  .bar > div { height: 100%; border-radius: .4em; transition: width .4s ease-out; }
+  .player .nums { font-weight: 800; white-space: nowrap; min-width: 6.5em; text-align: right; }
+  .player .nums span { color: var(--muted); font-weight: 500; }
+  .empty { color: var(--muted); font-style: italic; }
+
+  .causes { display: grid; gap: .55em; }
+  .cause { display: grid; grid-template-columns: 1.8em 1fr auto; align-items: center; gap: .6em; }
+  .cause .emoji { font-size: 1.3em; }
+  .cause .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cause .n { font-family: var(--pixel); font-size: .85em; color: var(--accent); }
+  .cause .track { grid-column: 2 / 4; height: .35em; background: #2c1d48; border-radius: .2em; margin-top: -.3em; }
+  .cause .track > div { height: 100%; background: var(--hot); border-radius: .2em; transition: width .4s; }
+
+  .ticker { list-style: none; padding: 0; display: grid; gap: .5em; }
+  .ticker li { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: .6em; align-items: center; }
+  .ticker .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ticker li:first-child { animation: slidein .4s ease-out; }
+  .ticker .t { color: var(--muted); font-variant-numeric: tabular-nums; font-size: .85em; }
+  .ticker .who { font-family: var(--pixel); font-size: .7em; padding: .35em .4em; border-radius: .3em; color: #12091f; }
+  .ticker .ml { color: var(--accent); font-weight: 800; }
+  @keyframes slidein { from { transform: translateX(-1em); opacity: 0; } }
+
+  footer { display: flex; justify-content: space-between; color: var(--muted); font-size: .9em; gap: 2em; }
+  footer b { color: var(--accent); }
+
+  #flash {
+    position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none;
+    background: rgba(18, 9, 31, .78); opacity: 0; transition: opacity .25s;
+  }
+  #flash.show { opacity: 1; }
+  #flash .card { text-align: center; transform: scale(.6); transition: transform .35s cubic-bezier(.2, 1.6, .4, 1); }
+  #flash.show .card { transform: scale(1); }
+  #flash .big { font-size: 9em; line-height: 1; }
+  #flash .who { font-family: var(--pixel); font-size: 2.6em; margin-top: .4em; }
+  #flash .what { font-size: 2.4em; font-weight: 800; margin-top: .4em; }
+  #flash .ml { font-family: var(--pixel); font-size: 2em; color: var(--accent); margin-top: .6em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>DRANGLPAK64<small>HALL OF SHAME · ROBOEXOTICA</small></h1>
+    <div class="conn" id="conn">verbinde…</div>
+  </header>
+
+  <div class="totals">
+    <div class="stat"><div class="label">Heute gezapft</div><div class="value" id="ml">0 ml</div></div>
+    <div class="stat"><div class="label">Treffer heute</div><div class="value" id="hits">0</div></div>
+    <div class="stat"><div class="label">Negroni-Codes geknackt</div><div class="value" id="negroni">0</div></div>
+  </div>
+
+  <main>
+    <section>
+      <h2>AKTUELLE RUNDE</h2>
+      <div class="players" id="players"></div>
+    </section>
+    <section>
+      <h2>TODESURSACHEN</h2>
+      <div class="causes" id="causes"></div>
+    </section>
+    <section>
+      <h2>LIVE-TICKER</h2>
+      <ul class="ticker" id="ticker"></ul>
+    </section>
+  </main>
+
+  <footer>
+    <div id="record">Noch kein Rekord – wer traut sich?</div>
+    <div>Wer getroffen wird, trinkt. 🍹 Bitte verantwortungsvoll genießen.</div>
+  </footer>
+</div>
+
+<div id="flash"><div class="card">
+  <div class="big" id="f-emoji"></div>
+  <div class="who" id="f-who"></div>
+  <div class="what" id="f-what"></div>
+  <div class="ml" id="f-ml"></div>
+</div></div>
+
+<script>
+const EVENTS = {
+  driving_spinout:     ["🌀", "Ins Schleudern gekommen"],
+  early_start_spinout: ["🚦", "Fehlstart!"],
+  explosion_crash:     ["💥", "In die Luft gejagt"],
+  fell_in_lava:        ["🌋", "In die Lava gefallen"],
+  fell_in_water:       ["🌊", "Baden gegangen"],
+  high_tumble:         ["🤸", "Durch die Luft gewirbelt"],
+  hit_banana:          ["🍌", "Auf der Banane ausgerutscht"],
+  hit_by_star:         ["⭐", "Vom Stern überrollt"],
+  hit_paddle_boat:     ["🚢", "Vom Raddampfer erwischt"],
+  lightning_strike:    ["⚡", "Vom Blitz getroffen"],
+  low_tumble:          ["🙃", "Überschlagen"],
+  negroni_code:        ["🍸", "Negroni-Code geknackt!"],
+  spinout:             ["💫", "Weggedreht"],
+  squished:            ["🥞", "Plattgewalzt"],
+  terrain_tumble:      ["🪨", "Über Stock und Stein"],
+};
+const placeLabel = n => ["🥇", "🥈", "🥉"][n - 1] || `${n}.`;
+const COLORS = ["#ff5d5d", "#4fc3ff", "#7dff6a", "#ffd23f", "#c38bff", "#ff9a3c", "#3cffd8", "#ff7ad9"];
+
+const $ = id => document.getElementById(id);
+const describe = e => EVENTS[e] || ["❓", e];
+const color = p => COLORS[p % COLORS.length];
+const fmtMl = ml => `${Math.round(ml).toLocaleString("de-AT")} ml`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function setValue(el, text) {
+  if (el.textContent === text) return;
+  el.textContent = text;
+  el.classList.remove("bump");
+  void el.offsetWidth;
+  el.classList.add("bump");
+}
+
+function render(s) {
+  setValue($("ml"), fmtMl(s.totalMl));
+  setValue($("hits"), String(s.totalHits));
+  setValue($("negroni"), String(s.byEvent.negroni_code || 0));
+
+  const round = Object.entries(s.round).map(([p, d]) => [Number(p), d]).sort((a, b) => a[0] - b[0]);
+  const maxHits = Math.max(1, ...round.map(([, d]) => d.hits));
+  $("players").innerHTML = round.length ? round.map(([p, d]) => `
+    <div class="player">
+      <div class="badge" style="background:${color(p)}">P${p + 1}</div>
+      <div class="bar"><div style="width:${100 * d.hits / maxHits}%;background:${color(p)}"></div></div>
+      <div class="nums">${d.hits}× <span>· ${fmtMl(d.ml)}</span></div>
+      <div class="place">${d.place ? placeLabel(d.place) : ""}</div>
+    </div>`).join("")
+    : `<div class="empty">Warte auf die nächste Runde… 🏁</div>`;
+
+  const causes = Object.entries(s.byEvent).filter(([e]) => e !== "negroni_code").sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const maxCause = Math.max(1, ...causes.map(([, n]) => n));
+  $("causes").innerHTML = causes.length ? causes.map(([e, n]) => {
+    const [emoji, name] = describe(e);
+    return `<div class="cause"><div class="emoji">${emoji}</div><div class="name">${esc(name)}</div><div class="n">${n}</div>
+      <div></div><div class="track"><div style="width:${100 * n / maxCause}%"></div></div></div>`;
+  }).join("") : `<div class="empty">Noch niemand verunglückt.</div>`;
+
+  $("ticker").innerHTML = s.ticker.map(t => {
+    const [emoji, name] = describe(t.event);
+    return `<li><span class="t">${esc(t.t)}</span><span class="who" style="background:${color(t.player)}">P${t.player + 1}</span>
+      <span class="what">${emoji} ${esc(name)}</span><span class="ml">+${fmtMl(t.ml)}</span></li>`;
+  }).join("");
+
+  if (s.record) {
+    $("record").innerHTML = `🏆 Rekord-Pechvogel: <b>P${s.record.player + 1}</b> mit <b>${s.record.hits} Treffern</b> in einer Runde (${esc(s.record.at)})`;
+  }
+}
+
+let lastFlash = null, flashTimer = null;
+function flash(t) {
+  if (!t || t.id === lastFlash) return;
+  lastFlash = t.id;
+  const finish = t.place !== undefined;
+  const [emoji, name] = {
+    race_finish: ["🏁", `Im Ziel – Platz ${t.place}!`],
+    battle_out:  ["🎈", `Alle Ballons weg – Platz ${t.place}`],
+    battle_win:  ["🏆", "Battle gewonnen!"],
+  }[t.event] || describe(t.event);
+  $("f-emoji").textContent = emoji;
+  $("f-who").textContent = `P${t.player + 1}`;
+  $("f-who").style.color = color(t.player);
+  $("f-what").textContent = name;
+  $("f-ml").textContent = finish ? placeLabel(t.place) : `+${fmtMl(t.ml)}`;
+  $("flash").classList.add("show");
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => $("flash").classList.remove("show"), 2200);
+}
+
+function connect() {
+  const es = new EventSource("events");
+  es.onopen = () => { $("conn").textContent = "● live"; $("conn").classList.remove("off"); };
+  es.onerror = () => { $("conn").textContent = "● offline – verbinde neu…"; $("conn").classList.add("off"); };
+  es.onmessage = m => { const s = JSON.parse(m.data); render(s); flash(s.latest); };
+}
+connect();
+</script>
+</body>
+</html>

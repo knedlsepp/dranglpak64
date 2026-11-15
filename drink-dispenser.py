@@ -17,6 +17,7 @@ Behaviour:
 
 import json
 import logging
+import socket
 import sys
 import threading
 import time
@@ -76,6 +77,10 @@ EVENT_DELAYS: dict[str, float] = {
     "squished": 0.3,
     "terrain_tumble": 0.3,
 }
+
+# drangl-dashboard listens here for dispensed drinks and race progress.
+DASHBOARD_ADDR: tuple[str, int] = ("127.0.0.1", 6464)
+DASHBOARD_ONLY_EVENTS: set[str] = {"race_start", "race_finish", "battle_out", "battle_win"}
 
 GPIO_CHIP: str = "/dev/gpiochip0"
 CONSUMER: str = "drink-dispenser"
@@ -180,12 +185,22 @@ class PinController:
             self._timer = None
 
 
+def notify_dashboard(sock: socket.socket, data: dict) -> None:
+    """Fire-and-forget: dispensing must never depend on the dashboard."""
+    try:
+        sock.sendto(json.dumps(data).encode(), DASHBOARD_ADDR)
+    except OSError:
+        pass
+
+
 def main() -> None:
     line_request = init_gpio()
     controllers = {
         player: PinController(pin, line_request)
         for player, pin in PLAYER_TO_GPIO.items()
     }
+    dashboard_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    dashboard_sock.setblocking(False)
 
     try:
         for raw_line in sys.stdin:
@@ -202,6 +217,9 @@ def main() -> None:
 
             event = data.get("event")
             if event is None:
+                continue
+            if event in DASHBOARD_ONLY_EVENTS:
+                notify_dashboard(dashboard_sock, data)
                 continue
             if event not in EVENT_DURATIONS:
                 logging.info(f"Event '{event}' not in event durations, skipping")
@@ -222,6 +240,7 @@ def main() -> None:
                 f"Dispensing drink for Player #{player_index} (event: {event}, gpio: {gpio_pin}, delay: {delay}s, duration: {duration}s)"
             )
             ctrl.trigger(delay, duration)
+            notify_dashboard(dashboard_sock, {"event": event, "playerIndex": player_index, "duration": duration})
 
     except KeyboardInterrupt:
         pass
