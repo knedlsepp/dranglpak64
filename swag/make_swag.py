@@ -249,7 +249,7 @@ def tshirt_dtf(logo: Logo) -> str:
 
 
 def sticker_cabinet(logo: Logo) -> str:
-    """20 x 20 cm for the front of a 25 x 25 cm Rittal AX cabinet."""
+    """20 x 20 cm for the front of the 30 x 30 cm Rittal KX E-Box."""
     size, margin = 200, 12
     body = f'<rect width="{size}" height="{size}" rx="12" fill="{BLACK}"/>'
     body += logo.place(logo.chrome("cabinet"), margin, 12, size - 2 * margin)

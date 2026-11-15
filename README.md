@@ -82,9 +82,9 @@ silicone tubes are filled before the first race. (In nk64 this is the "negroni c
 | Silicone hose, 6 mm ID × 9 mm OD, food grade | | one per player, with a replaceable paper mouthpiece |
 | 90° hose connectors, 6 mm (pack of 6) | €4.99 | for the hoses |
 | Cable ties, 80 × 1.8 mm (300 pieces) | €5.57 | |
-| Rittal AX cabinet | | houses it all |
+| [Rittal KX 1555.000 E-Box](https://www.automation24.at/e-box-rittal-kx-1555-000-300-x-300-x-120) | €52.90 | 300 × 300 × 120 mm, IP66, with mounting plate: houses it all |
 | [HangTon USB-C panel mount](https://www.amazon.de/dp/B0CDPSGBNL) | | waterproof (IP65) pass-through in the cabinet wall |
-| **Parts listed with a price** | **€248.38** | |
+| **Parts listed with a price** | **€301.28** | |
 
 The relay board switches its relays with these GPIOs (active low), which is what
 [`drink-dispenser.py`](drink-dispenser.py) drives:
