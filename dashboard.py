@@ -309,6 +309,7 @@ def round_watchdog(dashboard: Dashboard) -> None:
 CONTENT_TYPES: dict[str, str] = {
     ".html": "text/html; charset=utf-8",
     ".svg": "image/svg+xml",
+    ".png": "image/png",
     ".ttf": "font/ttf",
     ".txt": "text/plain; charset=utf-8",
 }

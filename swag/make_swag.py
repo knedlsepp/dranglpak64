@@ -8,7 +8,7 @@ Writes to out/ (text converted to paths, so print shops don't need the font):
     tshirt-dtf.svg            Full chrome logo for DTF/digital transfer print
     sticker-cabinet.svg       Logo + QR code to the live Hall of Shame, for the cabinet
     sticker-logo.svg          Logo sticker for visitors to take home
-Also writes ../web/logo.svg for the dashboard.
+Also writes ../web/logo.svg and ../web/favicon.svg for the dashboard.
 
 Usage (from this directory):
     nix-shell -p 'python3.withPackages (ps: [ ps.fonttools ps.uharfbuzz ps.segno ps.skia-pathops ])' \
@@ -108,12 +108,12 @@ def stroked(path: pathops.Path, width: float) -> pathops.Path:
 
 
 class Logo:
-    """Logo geometry in font units (y up)."""
+    """Logo geometry in font units (y up). Other texts in the same style, e.g. for the favicon."""
 
-    def __init__(self) -> None:
-        self.main = shape_path(LOGO_MAIN)
-        advance = shape(LOGO_MAIN, pathops.Path().getPen())
-        self.sup = shape_path(LOGO_SUP, scale=SUP_SCALE, dx=advance + SUP_GAP, dy=CAP * (1 - SUP_SCALE))
+    def __init__(self, main: str = LOGO_MAIN, sup: str = LOGO_SUP) -> None:
+        self.main = shape_path(main)
+        advance = shape(main, pathops.Path().getPen())
+        self.sup = shape_path(sup, scale=SUP_SCALE, dx=advance + SUP_GAP, dy=CAP * (1 - SUP_SCALE))
         self.face = union(self.main, self.sup)
         self.extrusion = union(*(
             translated(self.face, EXTRUDE[0] * i / EXTRUDE_STEPS, EXTRUDE[1] * i / EXTRUDE_STEPS)
@@ -280,10 +280,23 @@ def web_logo(logo: Logo) -> str:
     )
 
 
+def favicon() -> str:
+    """"D⁶⁴" on a dark rounded square: the whole logo is too wide for an icon."""
+    icon = Logo("D", LOGO_SUP)
+    size, margin = 64, 6
+    width = size - 2 * margin
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}">'
+        f'<rect width="{size}" height="{size}" rx="12" fill="#11141a"/>'
+        f'{icon.place(icon.chrome("icon"), margin, (size - width * icon.aspect) / 2, width)}</svg>\n'
+    )
+
+
 def main() -> None:
     logo = Logo()
     (HERE.parent / "web" / "logo.svg").write_text(web_logo(logo))
-    print("wrote ../web/logo.svg")
+    (HERE.parent / "web" / "favicon.svg").write_text(favicon())
+    print("wrote ../web/logo.svg and ../web/favicon.svg")
     files = {
         **tshirt_flex(logo),
         "tshirt-dtf": tshirt_dtf(logo),
