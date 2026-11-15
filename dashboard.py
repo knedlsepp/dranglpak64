@@ -169,7 +169,8 @@ class Dashboard:
         if not text:
             return False
         self._audience_sock.sendto(f"say {'*' if to is None else to} {text}\n".encode(), AUDIENCE_ADDR)
-        logging.info(f"Audience says to {'everyone' if to is None else f'player {to}'}: {text}")
+        # Not the text itself: the page promises messages are gone by the next day
+        logging.info(f"Audience message ({len(text)} characters) to {'everyone' if to is None else f'player {to}'}")
         with self._lock:
             self._add_to_ticker_locked({**self._next_entry_locked("audience_say", -1 if to is None else to), "text": text})
         return True

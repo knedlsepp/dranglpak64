@@ -56,6 +56,22 @@
   .header-side { display: flex; flex-direction: column; align-items: flex-end; gap: .5em; }
   .repo { color: var(--muted); font-size: .8em; text-decoration: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
   .repo:hover, .repo:focus { color: var(--text); border-color: var(--text); }
+  .header-links { display: flex; gap: 1em; }
+  .repo { background: none; border-width: 0 0 1px; padding: 0; font: inherit; font-size: .8em; cursor: pointer; }
+  #impressum {
+    margin: auto; /* undo "* { margin: 0 }", which keeps it from being centered */
+    max-width: min(34em, calc(100vw - 32px)); padding: 1.4em 1.6em; border-radius: .8em;
+    background: var(--panel); color: var(--text); border: 1px solid var(--line); font-size: .9em; line-height: 1.5;
+  }
+  #impressum::backdrop { background: rgba(7, 8, 11, .7); }
+  #impressum h2 { margin: 1em 0 .4em; }
+  #impressum h2:first-child { margin-top: 0; }
+  #impressum p { margin: 0 0 .6em; color: var(--muted); }
+  #impressum p b { color: var(--text); }
+  #impressum a { color: var(--accent); }
+  #impressum form { text-align: right; margin-top: 1em; }
+  #impressum button { font: inherit; font-family: var(--display); padding: .45em 1em .35em; border: 0; border-radius: .5em;
+                      background: var(--accent); color: #0b0c10; cursor: pointer; }
 
   .totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2em; }
   .stat, section {
@@ -156,6 +172,8 @@
     .header-side { align-self: flex-start; gap: .3em; }
     .repo { font-size: .7em; }
     .repo .long { display: none; }
+    .header-links { flex-direction: column; align-items: flex-end; gap: .2em; }
+    .header-side { align-items: flex-end; }
     .totals { gap: 8px; }
     .stat { padding: .6em .7em; }
     .stat .label { font-size: .62em; letter-spacing: .08em; }
@@ -175,7 +193,10 @@
   <header>
     <h1><img src="/logo.svg" alt="DranglPak64"><small>ROBOEXOTICA 2026</small></h1>
     <div class="header-side">
-      <a class="repo" href="https://github.com/knedlsepp/dranglpak64" target="_blank" rel="noopener"><span class="long">Code auf </span>GitHub ↗</a>
+      <div class="header-links">
+        <button class="repo" type="button" onclick="document.getElementById('impressum').showModal()">Impressum</button>
+        <a class="repo" href="https://github.com/knedlsepp/dranglpak64" target="_blank" rel="noopener"><span class="long">Code auf </span>GitHub ↗</a>
+      </div>
       <div class="conn" id="conn">verbinde…</div>
     </div>
   </header>
@@ -211,6 +232,18 @@
     </section>
   </main>
 </div>
+
+<dialog id="impressum">
+  <h2>IMPRESSUM</h2>
+  <p>Offenlegung gemäß § 25 Mediengesetz</p>
+  <p><b>Medieninhaber:</b> Josef Kemetmüller, Wien</p>
+  <p>Privates, nicht-kommerzielles Projekt für die Roboexotica 2026.
+    Quellcode auf <a href="https://github.com/knedlsepp/dranglpak64" target="_blank" rel="noopener">GitHub</a>.</p>
+  <h2>DATENSCHUTZ</h2>
+  <p>Nachrichten an die Spieler werden öffentlich angezeigt und spätestens um 6 Uhr früh gelöscht.
+    Keine Cookies, kein Tracking. Die öffentliche Seite wird über Cloudflare ausgeliefert.</p>
+  <form method="dialog"><button autofocus>Schließen</button></form>
+</dialog>
 
 <div id="flash"><div class="card">
   <div class="big" id="f-emoji"></div>
