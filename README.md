@@ -27,7 +27,7 @@ got hit by what.
 
 ```
  ┌───────────┐     ┌──────────────┐ USB ┌──────────────────┐ GPIO ┌─────────┐
- │ Nintendo  │◀───▶│ SummerCart64 │◀───▶│  Raspberry Pi 4  │─────▶│  pumps  │──▶ 👄
+ │ Nintendo  │◀───▶│ SummerCart64 │◀───▶│  Raspberry Pi 4B │─────▶│  pumps  │──▶ 👄
  │    64     │     │  flash cart  │     │     (NixOS)      │      │ (P1–P8) │
  └───────────┘     └──────────────┘     └──────────────────┘      └─────────┘
    runs nk64          IS-Viewer +         drink-dispenser.py
@@ -65,17 +65,35 @@ silicone tubes are filled before the first race. (In nk64 this is the "negroni c
 
 ## Hardware
 
-- Nintendo 64 with up to four controllers
-- [SummerCart64](https://github.com/Polprzewodnikowy/SummerCart64) flash cart
-- Raspberry Pi 4 running NixOS
-- One pump per player, switched by active-low GPIOs – all housed in a small Rittal AX cabinet
-- One silicone tube per player, with a replaceable paper mouthpiece
+| Part | Price | |
+|---|---:|---|
+| Nintendo 64 | priceless | with up to four controllers |
+| [Mcbazel N64 HDMI adapter](https://www.amazon.de/dp/B0BXH2J7C8) | €15.99 | for a modern TV or screen, 480p/720p |
+| [SummerCart64](https://github.com/Polprzewodnikowy/SummerCart64) | €36.85 | flash cart, connected to the Pi via USB |
+| Raspberry Pi 4B | 50€ (2025) | running NixOS |
+| [Waveshare 8-ch Relay Expansion Board](https://de.aliexpress.com/item/32952644654.html) | €26.99 | on top of the Pi: a relay per player |
+| 4× G928 12 V peristaltic pump | €120.68 | one per player, 500 ml/min |
+| 12 V power supply | | for the pumps, and the Pi via the step-down converter |
+| [Greluma 12 V to 5 V converter](https://www.amazon.de/dp/B0BX3MQ18D) | €9.06 | 5 V/3 A on USB-C: powers the Pi from the 12 V |
+| WAGO 221-413 terminals, 3-pole (12 pieces) | €8.02 | for the wiring |
+| WAGO 221-415 terminals, 5-pole (8 pieces) | €7.04 | for the wiring |
+| Speaker cable, 2 × 2.5 mm², 10 m | €8.20 | for the wiring |
+| Blade connectors, 2.8 mm, 1.5–2.5 mm² (50 pieces) | €4.99 | for the pumps' terminals |
+| Silicone hose, 6 mm ID × 9 mm OD, food grade | | one per player, with a replaceable paper mouthpiece |
+| 90° hose connectors, 6 mm (pack of 6) | €4.99 | for the hoses |
+| Cable ties, 80 × 1.8 mm (300 pieces) | €5.57 | |
+| Rittal AX cabinet | | houses it all |
+| [HangTon USB-C panel mount](https://www.amazon.de/dp/B0CDPSGBNL) | | waterproof (IP65) pass-through in the cabinet wall |
+| **Parts listed with a price** | **€248.38** | |
+
+The relay board switches its relays with these GPIOs (active low), which is what
+[`drink-dispenser.py`](drink-dispenser.py) drives:
 
 | Player | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 |
 |--------|----|----|----|----|----|----|----|----|
 | GPIO   | 5  | 6  | 13 | 16 | 19 | 20 | 21 | 26 |
 
-(The game has at most four human players; the dispenser knows eight outputs.)
+(The game has at most four human players, so four pumps are enough.)
 
 ## The audience joins in
 
