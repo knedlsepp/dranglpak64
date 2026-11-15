@@ -149,11 +149,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1794781767,
-        "narHash": "sha256-Yv53AkKhIsd+8m0SRloEazdkAOcyvNytZE1WjfHkTRY=",
+        "lastModified": 1794782435,
+        "narHash": "sha256-K9pzjeMiqozdeUmbHXnPQ2o4NGuXG1CYK5xVEpyAmIA=",
         "ref": "refs/heads/main",
-        "rev": "8d1b4ae22c00c949141de89a532693d0ca770588",
-        "revCount": 698,
+        "rev": "c05a2a8abc1ff838ac956496a896c60e4ca66693",
+        "revCount": 699,
         "submodules": true,
         "type": "git",
         "url": "https://github.com/knedlsepp/nk64"
