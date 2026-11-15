@@ -345,7 +345,7 @@ async function post(url, body, done, failed) {
 
 $("steal-buttons").addEventListener("click", ev => {
   const btn = ev.target.closest("button");
-  if (btn) post(`/steal?player=${btn.dataset.p}`, null, "🫳 Servus, Item!", "Hat nicht funktioniert.");
+  if (btn) post(`/steal?player=${btn.dataset.p}`, null, "🫳 Tschüss, Item!", "Hat nicht funktioniert.");
 });
 
 $("say-to").addEventListener("click", ev => {
