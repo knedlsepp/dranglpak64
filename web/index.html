@@ -40,7 +40,7 @@
   .wrap {
     height: 100%;
     display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     gap: 1.2em;
     padding: 1.4em 2em;
   }
@@ -95,7 +95,6 @@
   .ticker .ml { color: var(--accent); font-weight: 800; }
   @keyframes slidein { from { transform: translateX(-1em); opacity: 0; } }
 
-  footer { display: flex; justify-content: space-between; color: var(--muted); font-size: .9em; gap: 2em; }
 
   .audience { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .6em 1.2em; padding: .7em 1.2em; }
   .audience-title { font-family: var(--display); font-size: 1.15em; }
@@ -117,7 +116,6 @@
   .say input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .audience-feedback { grid-column: 1 / -1; font-size: .9em; color: var(--accent); }
   .audience-feedback:empty { display: none; }
-  footer b { color: var(--accent); }
 
   #flash {
     position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none;
@@ -156,7 +154,6 @@
     .ticker li { grid-template-columns: auto minmax(0, 1fr) auto; }
     .ticker .t { display: none; }
     main { grid-template-columns: 1fr; gap: 14px; }
-    footer { flex-direction: column; gap: .5em; }
     #flash .big { font-size: 6em; }
     #flash .who { font-size: 2em; }
     #flash .what { font-size: 1.5em; padding: 0 16px; }
@@ -184,7 +181,7 @@
 
   <div class="totals">
     <div class="stat"><div class="label">Heute gedrangelt</div><div class="value fire" id="ml">0,0 cl</div></div>
-    <div class="stat"><div class="label">Shots gedrangelt</div><div class="value chrome" id="hits">0</div></div>
+    <div class="stat"><div class="label">Erwischt</div><div class="value chrome" id="hits">0×</div></div>
   </div>
 
   <main>
@@ -201,11 +198,6 @@
       <ul class="ticker" id="ticker"></ul>
     </section>
   </main>
-
-  <footer>
-    <div id="record">Noch kein Pechvogel – wer traut sich?</div>
-    <div>Wer etwas abkriegt, trinkt. 🍹 Bitte mit Maß und Ziel.</div>
-  </footer>
 </div>
 
 <div id="flash"><div class="card">
@@ -295,7 +287,7 @@ function render(s) {
   game = s.game;
   renderStealButtons();
   setValue($("ml"), fmtCl(s.totalMl));
-  setValue($("hits"), String(s.totalHits));
+  setValue($("hits"), `${s.totalHits}×`);
 
   const round = Object.entries(s.round).map(([p, d]) => [Number(p), d]).sort((a, b) => a[0] - b[0]);
   const maxMl = Math.max(1, ...round.map(([, d]) => d.ml));
@@ -326,13 +318,6 @@ function render(s) {
     }[t.event] || [describe(t.event).map(esc).join(" "), `+${fmtCl(t.ml)}`];
     return `<li><span class="t">${esc(t.t)}</span>${who}<span class="what">${what}</span><span class="ml">${right}</span></li>`;
   }).join("");
-
-  const yesterday = s.recordYesterday
-    ? ` · Gestern: <b>P${s.recordYesterday.player + 1}</b> mit <b>${s.recordYesterday.hits}</b>`
-    : "";
-  $("record").innerHTML = (s.record
-    ? `🏆 Pechvogel vom Tag: <b>P${s.record.player + 1}</b> mit <b>${s.record.hits} Shots</b> in einer Runde (${esc(s.record.at)})`
-    : "Noch kein Pechvogel – wer traut sich?") + yesterday;
 }
 
 renderStealButtons();

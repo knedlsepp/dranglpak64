@@ -83,8 +83,6 @@ def empty_stats() -> dict:
         "totalMl": 0.0,
         "byEvent": {},
         "ticker": [],
-        "record": None,
-        "recordYesterday": None,
     }
 
 
@@ -223,15 +221,6 @@ class Dashboard:
             p["hits"] += 1
             p["ml"] = round(p["ml"] + ml, 1)
 
-            record = stats["record"]
-            if record is None or p["hits"] > record["hits"]:
-                stats["record"] = {
-                    "hits": p["hits"],
-                    "player": player,
-                    "character": self._character_locked(player),
-                    "at": time.strftime("%H:%M"),
-                }
-
             self._latest = entry
             self._save_locked()
             self._broadcast_locked()
@@ -241,7 +230,7 @@ class Dashboard:
             if self._stats["day"] == current_day():
                 return
             logging.info(f"New day, resetting stats of {self._stats['day']}")
-            self._stats = {**empty_stats(), "recordYesterday": self._stats["record"]}
+            self._stats = empty_stats()
             self._round = {}
             self._latest = None
             self._save_locked()
