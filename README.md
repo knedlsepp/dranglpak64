@@ -84,7 +84,9 @@ silicone tubes are filled before the first race. (In nk64 this is the "negroni c
 | Cable ties, 80 × 1.8 mm (300 pieces) | €5.57 | |
 | [Rittal KX 1555.000 E-Box](https://www.automation24.at/e-box-rittal-kx-1555-000-300-x-300-x-120) | €52.90 | 300 × 300 × 120 mm, IP66, with mounting plate: houses it all |
 | [HangTon USB-C panel mount](https://www.amazon.de/dp/B0CDPSGBNL) | | waterproof (IP65) pass-through in the cabinet wall |
-| **Parts listed with a price** | **€301.28** | |
+| USB-C to USB-C cable, 0.3 m (pack of 2) | €6.04 | short cables inside the cabinet |
+| USB-A to USB-C cable, 20 cm | €5.53 | short cable inside the cabinet |
+| **Parts listed with a price** | **€312.85** | |
 
 The relay board switches its relays with these GPIOs (active low), which is what
 [`drink-dispenser.py`](drink-dispenser.py) drives:
