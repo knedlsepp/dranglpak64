@@ -75,8 +75,7 @@
   .bar { height: 1.6em; background: #1b1f28; border-radius: .4em; overflow: hidden; box-shadow: inset 0 .1em .3em rgba(0, 0, 0, .5); }
   .bar > div { height: 100%; border-radius: .4em; transition: width .4s ease-out;
                background-image: linear-gradient(180deg, rgba(255, 255, 255, .35) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, .2) 100%); }
-  .player .nums { font-weight: 800; white-space: nowrap; min-width: 6.5em; text-align: right; }
-  .player .nums span { color: var(--muted); font-weight: 500; }
+  .player .nums { font-weight: 800; white-space: nowrap; min-width: 4.5em; text-align: right; }
   .empty { color: var(--muted); font-style: italic; }
 
   .causes { display: grid; gap: .55em; }
@@ -299,12 +298,12 @@ function render(s) {
   setValue($("hits"), String(s.totalHits));
 
   const round = Object.entries(s.round).map(([p, d]) => [Number(p), d]).sort((a, b) => a[0] - b[0]);
-  const maxHits = Math.max(1, ...round.map(([, d]) => d.hits));
+  const maxMl = Math.max(1, ...round.map(([, d]) => d.ml));
   $("players").innerHTML = round.length ? round.map(([p, d]) => `
     <div class="player">
       <div class="badge" style="background:${color(p)}">P${p + 1}</div>
-      <div class="bar"><div style="width:${100 * d.hits / maxHits}%;background:${color(p)}"></div></div>
-      <div class="nums">${d.hits}× <span>· ${fmtCl(d.ml)}</span></div>
+      <div class="bar"><div style="width:${100 * d.ml / maxMl}%;background:${color(p)}"></div></div>
+      <div class="nums">${fmtCl(d.ml)}</div>
       <div class="place">${d.place ? placeLabel(d.place) : ""}</div>
     </div>`).join("")
     : `<div class="empty">Gleich geht's weiter… 🏁</div>`;
