@@ -53,6 +53,9 @@
   h1 small { font-family: var(--display); font-weight: 400; font-size: .75em; color: var(--muted); letter-spacing: .2em; padding-bottom: .5em; }
   .conn { font-size: .8em; color: var(--muted); }
   .conn.off { color: var(--hot); }
+  .header-side { display: flex; flex-direction: column; align-items: flex-end; gap: .5em; }
+  .repo { color: var(--muted); font-size: .8em; text-decoration: none; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .repo:hover, .repo:focus { color: var(--text); border-color: var(--text); }
 
   .totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.2em; }
   .stat, section {
@@ -149,7 +152,10 @@
     h1 img { height: auto; width: min(70vw, 320px); }
     h1 { font-size: 1em; }
     h1 small { font-size: .8em; letter-spacing: .12em; padding: 0; }
-    .conn { font-size: .75em; align-self: flex-start; }
+    .conn { font-size: .75em; }
+    .header-side { align-self: flex-start; gap: .3em; }
+    .repo { font-size: .7em; }
+    .repo .long { display: none; }
     .totals { gap: 8px; }
     .stat { padding: .6em .7em; }
     .stat .label { font-size: .62em; letter-spacing: .08em; }
@@ -168,7 +174,10 @@
 <div class="wrap">
   <header>
     <h1><img src="/logo.svg" alt="DranglPak64"><small>ROBOEXOTICA 2026</small></h1>
-    <div class="conn" id="conn">verbinde…</div>
+    <div class="header-side">
+      <a class="repo" href="https://github.com/knedlsepp/dranglpak64" target="_blank" rel="noopener"><span class="long">Code auf </span>GitHub ↗</a>
+      <div class="conn" id="conn">verbinde…</div>
+    </div>
   </header>
 
   <section class="audience">
