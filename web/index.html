@@ -225,9 +225,12 @@ function render(s) {
       <span class="what">${emoji} ${esc(name)}</span><span class="ml">+${fmtMl(t.ml)}</span></li>`;
   }).join("");
 
-  if (s.record) {
-    $("record").innerHTML = `🏆 Rekord-Pechvogel: <b>P${s.record.player + 1}</b> mit <b>${s.record.hits} Treffern</b> in einer Runde (${esc(s.record.at)})`;
-  }
+  const yesterday = s.recordYesterday
+    ? ` · Gestern: <b>P${s.recordYesterday.player + 1}</b> mit <b>${s.recordYesterday.hits}</b>`
+    : "";
+  $("record").innerHTML = (s.record
+    ? `🏆 Rekord-Pechvogel: <b>P${s.record.player + 1}</b> mit <b>${s.record.hits} Treffern</b> in einer Runde (${esc(s.record.at)})`
+    : "Noch kein Rekord – wer traut sich?") + yesterday;
 }
 
 let lastFlash = null, flashTimer = null;

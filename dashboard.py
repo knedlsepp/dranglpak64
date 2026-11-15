@@ -17,6 +17,7 @@ Usage: drangl-dashboard <web dir>
 """
 
 import base64
+import datetime
 import hashlib
 import http.server
 import json
@@ -40,6 +41,8 @@ ML_PER_SECOND: float = 500 / 60
 # a round also counts as finished after this many seconds without any event.
 ROUND_IDLE_TIMEOUT: float = 300.0
 TICKER_LENGTH: int = 12
+# A new day starts at this hour, so a long night doesn't get reset midway.
+DAY_START_HOUR: int = 6
 # Dispense a drink, but are a reward rather than a hit.
 NOT_A_HIT: set[str] = {"negroni_code"}
 # Sent every frame while the buttons are held: one press counts once.
@@ -52,13 +55,20 @@ WEBSOCKET_KEEPALIVE: float = 15.0
 STATE_FILE: Path = Path(os.environ.get("STATE_DIRECTORY", ".")) / "stats.json"
 
 
+def current_day() -> str:
+    start_of_day = datetime.timedelta(hours=DAY_START_HOUR)
+    return (datetime.datetime.now() - start_of_day).date().isoformat()
+
+
 def empty_stats() -> dict:
     return {
+        "day": current_day(),
         "totalHits": 0,
         "totalMl": 0.0,
         "byEvent": {},
         "ticker": [],
         "record": None,
+        "recordYesterday": None,
     }
 
 
@@ -172,6 +182,17 @@ class Dashboard:
         # Not saved: arrives every frame while held, spare the SD card.
         self._broadcast_locked()
 
+    def check_new_day(self) -> None:
+        with self._lock:
+            if self._stats["day"] == current_day():
+                return
+            logging.info(f"New day, resetting stats of {self._stats['day']}")
+            self._stats = {**empty_stats(), "recordYesterday": self._stats["record"]}
+            self._round = {}
+            self._latest = None
+            self._save_locked()
+            self._broadcast_locked()
+
     def check_round_timeout(self) -> None:
         with self._lock:
             idle = time.monotonic() - self._last_event > ROUND_IDLE_TIMEOUT
@@ -235,6 +256,7 @@ def udp_listener(dashboard: Dashboard) -> None:
 def round_watchdog(dashboard: Dashboard) -> None:
     while True:
         time.sleep(2)
+        dashboard.check_new_day()
         dashboard.check_round_timeout()
 
 
