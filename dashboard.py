@@ -36,6 +36,8 @@ ML_PER_SECOND: float = 10.0
 # a round also counts as finished after this many seconds without any event.
 ROUND_IDLE_TIMEOUT: float = 300.0
 TICKER_LENGTH: int = 12
+# Dispense a drink, but are a reward rather than a hit.
+NOT_A_HIT: set[str] = {"negroni_code"}
 
 STATE_FILE: Path = Path(os.environ.get("STATE_DIRECTORY", ".")) / "stats.json"
 
@@ -112,14 +114,15 @@ class Dashboard:
                 self._finish_round_locked()
             self._last_event = now
 
+            is_hit = event not in NOT_A_HIT
             stats = self._stats
-            stats["totalHits"] += 1
+            stats["totalHits"] += is_hit
             stats["totalMl"] = round(stats["totalMl"] + ml, 1)
             stats["byEvent"][event] = stats["byEvent"].get(event, 0) + 1
             stats["ticker"] = [entry, *stats["ticker"]][:TICKER_LENGTH]
 
             p = self._round.setdefault(str(player), {"hits": 0, "ml": 0.0})
-            p["hits"] += 1
+            p["hits"] += is_hit
             p["ml"] = round(p["ml"] + ml, 1)
 
             record = stats["record"]
