@@ -30,8 +30,8 @@ logging.basicConfig(level=logging.INFO)
 
 UDP_ADDR: tuple[str, int] = ("127.0.0.1", 6464)
 HTTP_PORT: int = 80
-# FIXME: Calibrate: measure how many ml one pump delivers per second.
-ML_PER_SECOND: float = 10.0
+# Pump flow rate: 500 ml/min
+ML_PER_SECOND: float = 500 / 60
 # Rounds are separated by race_start. As a fallback (e.g. a race was quit),
 # a round also counts as finished after this many seconds without any event.
 ROUND_IDLE_TIMEOUT: float = 300.0
