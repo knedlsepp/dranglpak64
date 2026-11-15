@@ -363,7 +363,8 @@ def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> t
             query = urllib.parse.parse_qs(url.query)
             if url.path == "/say":
                 to = query.get("to", ["all"])[0]
-                length = min(int(self.headers.get("Content-Length", 0)), 1024)
+                length = self.headers.get("Content-Length", "0")
+                length = min(int(length), 1024) if length.isdigit() else 0
                 text = self.rfile.read(length).decode("utf-8", errors="replace")
                 if to != "all" and not (to.isdigit() and int(to) < AUDIENCE_PLAYERS):
                     self.send_error(404)
