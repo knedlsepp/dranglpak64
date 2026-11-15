@@ -98,6 +98,8 @@
   };
   networking.firewall.allowedTCPPorts = [ 80 ];
 
+  age.secrets.wireless.file = ./secrets/wireless.conf.age;
+
   services.openssh.enable = true;
   # Reachable as dranglpak64.local on whatever network we're on
   services.avahi = {
@@ -177,15 +179,11 @@
     wireless = {
       interfaces = [ "wlan0" ];
       enable = true;
+      # psk_<network>=<output of `wpa_passphrase <network>`>
+      secretsFile = config.age.secrets.wireless.path;
       networks = {
-        knoedlnetz = {
-          # Generated using `wpa_passphrase knoedlnetz`. A slight security issue...
-          pskRaw = "2c3655a7b8f9ed76f7e63824442a42eac54127737d138cac2f5b259ad667cca5";
-        };
-        banananet = {
-          # Generated using `wpa_passphrase banananet`. A slight security issue...
-	  pskRaw = "f9e69c35a0dc4e6fb96eb76f8e504b3bc952bf3730a11235d8205ab57884f7b6";
-        };
+        knoedlnetz.pskRaw = "ext:psk_knoedlnetz";
+        banananet.pskRaw = "ext:psk_banananet";
       };
     };
   };

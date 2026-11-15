@@ -10,8 +10,11 @@
     nk64.url = "git+https://github.com/knedlsepp/nk64?submodules=1";
 
     llm-agents.url = "github:numtide/llm-agents.nix";
+
+    agenix.url = "github:ryantm/agenix";
+    agenix.inputs.nixpkgs.follows = "nixpkgs";
   };
-  outputs = { self, nixpkgs, nixos-hardware, llm-agents, summercart64, nk64 }: {
+  outputs = { self, nixpkgs, nixos-hardware, llm-agents, summercart64, nk64, agenix }: {
     nixosConfigurations = {
       dranglpak64 = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
@@ -23,6 +26,7 @@
             ];
           })
           nixos-hardware.nixosModules.raspberry-pi-4
+          agenix.nixosModules.default
           ./configuration.nix
           ./base.nix
         ];
