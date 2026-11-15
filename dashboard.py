@@ -8,6 +8,7 @@ Receives JSON notifications via UDP (sent by drink-dispenser):
     {"event": "battle_out", "playerIndex": 2, "place": 3}
     {"event": "battle_win", "playerIndex": 1}
     {"event": "audience_steal", "playerIndex": 1, "effect": "item"}  (or "none")
+    {"event": "audience_goggles", "playerIndex": 1}
 race_start is also sent at the start of a battle. mode: 0 Grand Prix,
 1 Time Trials, 2 Versus, 3 Battle. characters (of the human players)
 also determine the colour of their battle balloons, which the page uses.
@@ -16,9 +17,10 @@ Serves a dashboard page on HTTP_PORT that updates live via a WebSocket
 (/ws). Where WebSockets don't get through, the page falls back to polling
 /state. Daily stats are persisted, so they survive restarts.
 
-Viewers can steal a player's item (POST /steal?player=N), which sends
-"steal N" to the game (see audience_poll() in nk64): harmless on purpose,
-it doesn't dispense a drink. They can also show a message on a player's
+Viewers can steal a player's item (POST /steal?player=N) or put the drunk
+goggles on them (POST /goggles?player=N), which sends "steal N" or
+"goggles N" to the game (see audience_poll() in nk64): harmless on purpose,
+neither dispenses a drink. They can also show a message on a player's
 screen (POST /say?to=N, or to=all, the text as body), sent as
 "say <N|*> <text>".
 
@@ -58,6 +60,8 @@ PRIMING_EVENTS: set[str] = {"negroni_code"}
 # Lines sent here end up in the game, via the stdin of `sc64deployer debug`
 AUDIENCE_ADDR: tuple[str, int] = ("127.0.0.1", 6465)
 AUDIENCE_PLAYERS: int = 4
+# POST path -> command for the game, see audience_poll() in nk64
+AUDIENCE_ACTIONS: dict[str, str] = {"/steal": "steal", "/goggles": "goggles"}
 # What the game's debug font can display. Never "@": sc64deployer reads
 # "@path@" as a file to send.
 SAY_CHARACTERS: str = " !\"#%'()*+,-./0123456789:;<=>?ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_`abcdefghijklmnopqrstuvwxyz~"
@@ -156,10 +160,10 @@ class Dashboard:
             self._latest = None
             self._broadcast_locked()
 
-    def steal(self, player: int) -> None:
-        """Have the game take away player's item."""
-        self._audience_sock.sendto(f"steal {player}\n".encode(), AUDIENCE_ADDR)
-        logging.info(f"Audience steals the item of player {player}")
+    def audience_action(self, command: str, player: int) -> None:
+        """Have the game do command (see AUDIENCE_ACTIONS) to player."""
+        self._audience_sock.sendto(f"{command} {player}\n".encode(), AUDIENCE_ADDR)
+        logging.info(f"Audience: {command} player {player}")
 
     def say(self, to: int | None, text: str) -> bool:
         """Show a message on player to's screen, None for everyone's. False if
@@ -175,10 +179,10 @@ class Dashboard:
             self._add_to_ticker_locked({**self._next_entry_locked("audience_say", -1 if to is None else to), "text": text})
         return True
 
-    def audience_stole(self, player: int, effect: str) -> None:
-        """The game reports what stealing did."""
+    def audience_did(self, event: str, player: int, extra: dict) -> None:
+        """The game reports what an audience action did."""
         with self._lock:
-            self._add_to_ticker_locked({**self._next_entry_locked("audience_steal", player), "effect": effect})
+            self._add_to_ticker_locked({**self._next_entry_locked(event, player), **extra})
 
     def _add_to_ticker_locked(self, entry: dict) -> None:
         """For entries without a drink: shown and in the ticker, nothing counted."""
@@ -293,7 +297,9 @@ def udp_listener(dashboard: Dashboard) -> None:
             elif event == "battle_win":
                 dashboard.finish_race(event, int(data["playerIndex"]), 1)
             elif event == "audience_steal":
-                dashboard.audience_stole(int(data["playerIndex"]), str(data["effect"]))
+                dashboard.audience_did(event, int(data["playerIndex"]), {"effect": str(data["effect"])})
+            elif event == "audience_goggles":
+                dashboard.audience_did(event, int(data["playerIndex"]), {})
             else:
                 dashboard.handle_drink(event, int(data["playerIndex"]), float(data["duration"]))
         except (ValueError, KeyError, TypeError):
@@ -375,10 +381,10 @@ def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> t
                 self.end_headers()
                 return
             player = query.get("player", [""])[0]
-            if url.path != "/steal" or not player.isdigit() or int(player) >= AUDIENCE_PLAYERS:
+            if url.path not in AUDIENCE_ACTIONS or not player.isdigit() or int(player) >= AUDIENCE_PLAYERS:
                 self.send_error(404)
                 return
-            dashboard.steal(int(player))
+            dashboard.audience_action(AUDIENCE_ACTIONS[url.path], int(player))
             self.send_response(204)
             self.send_header("Cache-Control", "no-store")
             self.send_header("Content-Length", "0")
