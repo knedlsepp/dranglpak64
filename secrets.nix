@@ -7,6 +7,10 @@ let
   dranglpak64 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILNUfgCwuHCgx5e5KehgwOFzOZpQBRZ+D4vEBOkAZfIg";
 in
 {
+  # `cloudflared tunnel create dranglpak64` credentials
+  "secrets/cloudflared-dranglpak64.json.age".publicKeys = [ sepp dranglpak64 ];
+  # `cloudflared tunnel login` account certificate
+  "secrets/cloudflared-cert.pem.age".publicKeys = [ sepp dranglpak64 ];
   # WiFi PSKs for networking.wireless.secretsFile
   "secrets/wireless.conf.age".publicKeys = [ sepp dranglpak64 ];
 }
