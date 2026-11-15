@@ -6,7 +6,7 @@ Writes to out/ (text converted to paths, so print shops don't need the font):
     tshirt-flex-<foil>.svg    The same, one cut file per foil
     tshirt-flex-preview.svg   How the flex print looks on the black shirt
     tshirt-dtf.svg            Full chrome logo for DTF/digital transfer print
-    sticker-cabinet.svg       Logo + QR code to the live Hall of Shame, for the cabinet
+    sticker-cabinet.svg       Logo + QR code to the live dashboard, for the cabinet
     sticker-logo.svg          Logo sticker for visitors to take home
 Also writes ../web/logo.svg and ../web/favicon.svg for the dashboard.
 
@@ -253,7 +253,7 @@ def sticker_cabinet(logo: Logo) -> str:
     size, margin = 200, 12
     body = f'<rect width="{size}" height="{size}" rx="12" fill="{BLACK}"/>'
     body += logo.place(logo.chrome("cabinet"), margin, 12, size - 2 * margin)
-    body += text("LIVE: HALL OF SHAME", size / 2, 52, 5, "#9aa3b5", center=True)
+    body += text("LIVE MITSCHAUEN", size / 2, 52, 5, "#9aa3b5", center=True)
     qr_width = 112
     body += f'<rect x="{(size - qr_width) / 2 - 2:g}" y="58" width="{qr_width + 4}" height="{qr_width + 4}" rx="4" fill="{WHITE}"/>'
     body += qr((size - qr_width) / 2, 60, qr_width)

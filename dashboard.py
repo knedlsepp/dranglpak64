@@ -1,5 +1,5 @@
 """
-drangl-dashboard — Live "Hall of Shame" for the dranglpak64 drink dispenser.
+drangl-dashboard — Live dashboard for the dranglpak64 drink dispenser.
 
 Receives JSON notifications via UDP (sent by drink-dispenser):
     {"event": "hit_banana", "playerIndex": 2, "duration": 1.5}  (dispensed drink)

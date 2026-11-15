@@ -73,10 +73,10 @@
   '';
 
 
-  # Live "Hall of Shame" at http://dranglpak64.local
+  # Live dashboard at http://dranglpak64.local
   systemd.services.drangl-dashboard = {
     enable = true;
-    description = "Dranglpak64 Hall of Shame dashboard";
+    description = "Dranglpak64 live dashboard";
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
       Type = "simple";
@@ -100,7 +100,7 @@
   };
   networking.firewall.allowedTCPPorts = [ 80 ];
 
-  # Public Hall of Shame at https://dranglpak64.knedlsepp.at via Cloudflare
+  # Public dashboard at https://dranglpak64.knedlsepp.at via Cloudflare
   # Tunnel (outbound only, works behind the phone hotspot). Credentials were
   # created with `cloudflared tunnel create dranglpak64`.
   age.secrets.cloudflared-dranglpak64.file = ./secrets/cloudflared-dranglpak64.json.age;
@@ -146,7 +146,7 @@
   };
 
   # Open visitor hotspot. Every DNS name resolves to the Pi, so phones show
-  # the Hall of Shame as captive portal page right after connecting.
+  # the dashboard as captive portal page right after connecting.
   services.hostapd = {
     enable = true;
     radios.wlanap = {
@@ -156,7 +156,7 @@
       wifi4.capabilities = [ "SHORT-GI-20" ];
       wifi5.enable = false;
       networks.wlanap = {
-        ssid = "Dranglpak64 Hall of Shame";
+        ssid = "DranglPak64";
         authentication.mode = "none";
         # Visitors' phones shouldn't see each other
         apIsolate = true;
