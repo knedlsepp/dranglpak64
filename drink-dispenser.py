@@ -12,9 +12,11 @@ Behaviour:
 - Events arriving while the pin is already ACTIVE extend the deadline rather
     than toggling the pin off and on again.
 - Non-JSON lines and events not in ALLOWLIST are silently ignored (logged).
+- Bursts of lines are ignored, see BURST_LINES.
 
 """
 
+import collections
 import json
 import logging
 import socket
@@ -94,11 +96,20 @@ EVENT_DELAYS: dict[str, float] = {
     "hit_red_shell": 0.3,
     "lightning_strike": 0.3,
     "low_tumble": 0.3,
-    "negroni_code": 0.0,
+    # Not 0: a replay burst (see BURST_LINES) gets noticed before any pump starts
+    "negroni_code": 0.1,
     "spinout": 0.3,
     "squished": 0.3,
     "terrain_tumble": 0.3,
 }
+
+# Switching off the N64 makes the SummerCart64 replay its whole IS-Viewer buffer:
+# hundreds of old events within a fraction of a second. A game never sends more
+# than a few per frame, so this many lines within BURST_SECONDS are a replay.
+# Its events are ignored until no line came for BURST_QUIET_SECONDS.
+BURST_LINES: int = 30
+BURST_SECONDS: float = 0.2
+BURST_QUIET_SECONDS: float = 1.0
 
 # drangl-dashboard listens here for dispensed drinks and race progress.
 DASHBOARD_ADDR: tuple[str, int] = ("127.0.0.1", 6464)
@@ -146,17 +157,12 @@ class PinController:
                 self._activation_timer.start()
                 logging.info(f"GPIO {self._pin} scheduled to turn ON after {delay}s")
             else:
-                # Already active, just extend the deadline
-                # If there's a pending activation timer, we need to handle it
+                # Already active, just extend the deadline (set above)
                 if self._activation_timer is not None:
-                    self._activation_timer.cancel()
-                    self._activation_timer = None
-                    # Pin is logically active but not physically active yet
-                    # Need to activate it now or reschedule
-                    self._activation_timer = threading.Timer(delay, self._activate_and_schedule, [duration])
-                    self._activation_timer.daemon = True
-                    self._activation_timer.start()
-                    logging.info(f"GPIO {self._pin} rescheduled to turn ON after {delay}s")
+                    # About to turn ON: keep that time. Postponing it on every
+                    # event kept a held negroni code (an event every frame)
+                    # from ever starting the pump.
+                    pass
                 else:
                     # Pin is physically active, just extend the deadline
                     self._reschedule_locked(duration)
@@ -223,9 +229,22 @@ def main() -> None:
     }
     dashboard_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     dashboard_sock.setblocking(False)
+    recent_lines: collections.deque[float] = collections.deque(maxlen=BURST_LINES)
+    replay_until = 0.0
 
     try:
         for raw_line in sys.stdin:
+            now = time.monotonic()
+            recent_lines.append(now)
+            if now < replay_until:
+                replay_until = now + BURST_QUIET_SECONDS
+                continue
+            if len(recent_lines) == BURST_LINES and now - recent_lines[0] < BURST_SECONDS:
+                logging.warning("Burst of lines (N64 switched off?), ignoring it and stopping all pumps")
+                for ctrl in controllers.values():
+                    ctrl.turn_off()
+                replay_until = now + BURST_QUIET_SECONDS
+                continue
             raw_line = raw_line.strip()
             if not raw_line:
                 continue
