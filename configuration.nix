@@ -16,12 +16,14 @@
         let
           upload-rom = pkgs.writeShellApplication {
             name = "upload-rom";
-            runtimeInputs = [ pkgs.sc64deployer ];
+            runtimeInputs = [ pkgs.sc64deployer pkgs.socat ];
             text = ''
               until sc64deployer list; do sleep 2; done
               sc64deployer upload ${pkgs.nk64-rom}/mk64.eu.v11.z64
-              # Prevent "[IS-Viewer 64]: Stopped listening" via 'tail -f /dev/null'
-              exec tail -f /dev/null | sc64deployer debug --isv 0x03FF0000
+              # Lines on its stdin get sent to the game: commands from drangl-dashboard
+              # arrive as UDP datagrams. (An open stdin also prevents
+              # "[IS-Viewer 64]: Stopped listening".)
+              exec socat -u UDP-RECV:6465,bind=127.0.0.1 STDOUT | sc64deployer debug --isv 0x03FF0000
             '';
           };
           drink-dispenser = pkgs.writers.writePython3Bin "drink-dispenser"
