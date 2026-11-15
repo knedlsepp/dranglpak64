@@ -72,6 +72,15 @@
 
 
   services.openssh.enable = true;
+  # Reachable as dranglpak64.local on whatever network we're on
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    publish = {
+      enable = true;
+      addresses = true;
+    };
+  };
   networking.hostName = "dranglpak64";
   users = {
     users.root = {
