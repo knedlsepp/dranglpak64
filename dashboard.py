@@ -12,7 +12,7 @@ race_start is also sent at the start of a battle.
 Serves a dashboard page on HTTP_PORT that updates live via Server-Sent
 Events. Daily stats are persisted, so they survive restarts.
 
-Usage: drangl-dashboard <dashboard.html>
+Usage: drangl-dashboard <web dir>
 """
 
 import http.server
@@ -188,19 +188,35 @@ def round_watchdog(dashboard: Dashboard) -> None:
         dashboard.check_round_timeout()
 
 
-def make_handler(dashboard: Dashboard, html: bytes) -> type:
+CONTENT_TYPES: dict[str, str] = {
+    ".html": "text/html; charset=utf-8",
+    ".ttf": "font/ttf",
+    ".txt": "text/plain; charset=utf-8",
+}
+
+
+def load_web_files(web_dir: Path) -> dict[str, tuple[str, bytes]]:
+    return {
+        f"/{f.name}": (CONTENT_TYPES.get(f.suffix, "application/octet-stream"), f.read_bytes())
+        for f in web_dir.iterdir()
+        if f.is_file()
+    }
+
+
+def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> type:
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self) -> None:
-            if self.path == "/":
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(html)))
-                self.end_headers()
-                self.wfile.write(html)
-            elif self.path == "/events":
+            if self.path == "/events":
                 self._stream()
-            else:
-                self.send_error(404)
+                return
+            # Any unknown path gets the dashboard, so captive portal checks of
+            # phones land there too.
+            content_type, body = files.get(self.path, files["/index.html"])
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def _stream(self) -> None:
             self.send_response(200)
@@ -228,12 +244,12 @@ def make_handler(dashboard: Dashboard, html: bytes) -> type:
 
 
 def main() -> None:
-    html = Path(sys.argv[1]).read_bytes()
+    files = load_web_files(Path(sys.argv[1]))
     dashboard = Dashboard()
     threading.Thread(target=udp_listener, args=[dashboard], daemon=True).start()
     threading.Thread(target=round_watchdog, args=[dashboard], daemon=True).start()
     server = http.server.ThreadingHTTPServer(
-        ("", HTTP_PORT), make_handler(dashboard, html)
+        ("", HTTP_PORT), make_handler(dashboard, files)
     )
     logging.info(f"Dashboard at http://0.0.0.0:{HTTP_PORT}/")
     server.serve_forever()

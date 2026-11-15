@@ -87,7 +87,7 @@
             }
             (builtins.readFile ./dashboard.py);
         in
-        "${dashboard}/bin/drangl-dashboard ${./dashboard.html}";
+        "${dashboard}/bin/drangl-dashboard ${./web}";
       DynamicUser = true;
       # Allow binding to port 80
       AmbientCapabilities = [ "CAP_NET_BIND_SERVICE" ];
@@ -116,9 +116,64 @@
       ];
     };
   };
+  # The built-in WiFi is the uplink (SSH), the USB WiFi stick (RTL8188CUS) is
+  # the visitor hotspot. Give the stick a stable name regardless of USB port.
+  systemd.network.links."10-wlan-hotspot" = {
+    matchConfig.Driver = "rtl8192cu";
+    linkConfig.Name = "wlanap";
+  };
+
+  # Open visitor hotspot. Every DNS name resolves to the Pi, so phones show
+  # the Hall of Shame as captive portal page right after connecting.
+  services.hostapd = {
+    enable = true;
+    radios.wlanap = {
+      band = "2g";
+      channel = 6;
+      countryCode = "AT";
+      wifi4.capabilities = [ "SHORT-GI-20" ];
+      wifi5.enable = false;
+      networks.wlanap = {
+        ssid = "Dranglpak64 Hall of Shame";
+        authentication.mode = "none";
+        # Visitors' phones shouldn't see each other
+        apIsolate = true;
+        # No management frame protection on an open network
+        settings.ieee80211w = 0;
+      };
+    };
+  };
+  services.dnsmasq = {
+    enable = true;
+    # The Pi itself keeps using real DNS via the uplink
+    resolveLocalQueries = false;
+    settings = {
+      interface = "wlanap";
+      bind-dynamic = true;
+      no-resolv = true;
+      dhcp-range = "192.168.64.10,192.168.64.250,1h";
+      address = "/#/192.168.64.1";
+      # RFC 8910 captive portal announcement
+      dhcp-option = "114,http://192.168.64.1/";
+    };
+  };
+  networking.firewall.interfaces.wlanap = {
+    allowedUDPPorts = [ 53 67 ];
+    allowedTCPPorts = [ 53 ];
+  };
+  # Every name resolves to the Pi, so phones and browsers also try HTTPS here.
+  # Refuse it right away instead of silently dropping, or they hang until timeout.
+  networking.firewall.extraCommands = ''
+    iptables -I nixos-fw -i wlanap -p tcp --dport 443 -j REJECT --reject-with tcp-reset
+  '';
+
   networking = {
     networkmanager.enable = lib.mkForce false;
     interfaces."wlan0".useDHCP = true;
+    interfaces."wlanap" = {
+      useDHCP = false;
+      ipv4.addresses = [{ address = "192.168.64.1"; prefixLength = 24; }];
+    };
     wireless = {
       interfaces = [ "wlan0" ];
       enable = true;

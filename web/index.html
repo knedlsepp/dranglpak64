@@ -4,9 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dranglpak64 · Hall of Shame</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@500;800&display=swap" rel="stylesheet">
 <style>
+  /* Served by the Pi itself: visitors on the hotspot have no internet. */
+  @font-face {
+    font-family: "Press Start 2P";
+    src: url("/PressStart2P-Regular.ttf") format("truetype");
+    font-display: swap;
+  }
   :root {
     --bg: #12091f;
     --panel: #1e1233;
@@ -16,7 +20,7 @@
     --accent: #ffd23f;
     --hot: #ff4f8b;
     --pixel: "Press Start 2P", ui-monospace, monospace;
-    --sans: "Rubik", system-ui, sans-serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; }
@@ -227,7 +231,7 @@ function flash(t) {
 }
 
 function connect() {
-  const es = new EventSource("events");
+  const es = new EventSource("/events");
   es.onopen = () => { $("conn").textContent = "● live"; $("conn").classList.remove("off"); };
   es.onerror = () => { $("conn").textContent = "● offline – verbinde neu…"; $("conn").classList.add("off"); };
   es.onmessage = m => { const s = JSON.parse(m.data); render(s); flash(s.latest); };
