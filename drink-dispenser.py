@@ -113,7 +113,10 @@ BURST_QUIET_SECONDS: float = 1.0
 
 # drangl-dashboard listens here for dispensed drinks and race progress.
 DASHBOARD_ADDR: tuple[str, int] = ("127.0.0.1", 6464)
-DASHBOARD_ONLY_EVENTS: set[str] = {"race_start", "race_finish", "battle_out", "battle_win", "audience_steal", "audience_goggles"}
+DASHBOARD_ONLY_EVENTS: set[str] = {
+    "game_start", "race_start", "race_finish", "battle_out", "battle_win", "race_over",
+    "audience_steal", "audience_goggles",
+}
 
 GPIO_CHIP: str = "/dev/gpiochip0"
 CONSUMER: str = "drink-dispenser"

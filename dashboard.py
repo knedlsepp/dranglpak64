@@ -7,6 +7,8 @@ Receives JSON notifications via UDP (sent by drink-dispenser):
     {"event": "race_finish", "playerIndex": 2, "place": 1}
     {"event": "battle_out", "playerIndex": 2, "place": 3}
     {"event": "battle_win", "playerIndex": 1}
+    {"event": "race_over"}  (finished, won or quit)
+    {"event": "game_start"}  (the N64 was switched on)
     {"event": "audience_steal", "playerIndex": 1, "effect": "item"}  (or "none")
     {"event": "audience_goggles", "playerIndex": 1}
 race_start is also sent at the start of a battle. mode: 0 Grand Prix,
@@ -100,6 +102,8 @@ class Dashboard:
         self._round: dict[str, dict] = {}
         self._last_event = 0.0
         self._latest: dict | None = None
+        # The round shown is over (but kept until the next one starts)
+        self._round_over = False
         # Of the current race: "mode", "players", "characters". Unknown until
         # the first race_start after a restart.
         self._game: dict | None = None
@@ -126,6 +130,7 @@ class Dashboard:
             **self._stats,
             "round": self._round,
             "latest": self._latest,
+            "roundOver": self._round_over,
             "game": self._game,
             "version": self._version,
         }
@@ -156,6 +161,7 @@ class Dashboard:
             self._game = {"mode": mode, "players": players, "characters": characters}
             # List everyone playing, also before their first hit
             self._round = {str(p): {"hits": 0, "ml": 0.0} for p in range(players)}
+            self._round_over = False
             self._last_event = time.monotonic()
             self._latest = None
             self._broadcast_locked()
@@ -190,6 +196,12 @@ class Dashboard:
         self._latest = entry
         self._save_locked()
         self._broadcast_locked()
+
+    def end_round(self) -> None:
+        with self._lock:
+            if not self._round_over:
+                self._round_over = True
+                self._broadcast_locked()
 
     def finish_race(self, event: str, player: int, place: int) -> None:
         with self._lock:
@@ -296,6 +308,9 @@ def udp_listener(dashboard: Dashboard) -> None:
                 dashboard.finish_race(event, int(data["playerIndex"]), int(data["place"]))
             elif event == "battle_win":
                 dashboard.finish_race(event, int(data["playerIndex"]), 1)
+                dashboard.end_round()
+            elif event in ("race_over", "game_start"):
+                dashboard.end_round()
             elif event == "audience_steal":
                 dashboard.audience_did(event, int(data["playerIndex"]), {"effect": str(data["effect"])})
             elif event == "audience_goggles":

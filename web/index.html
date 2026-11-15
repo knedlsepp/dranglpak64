@@ -124,6 +124,8 @@
   .action-row { display: grid; grid-template-columns: minmax(0, 1fr) min(100%, 34em); align-items: center; gap: 1.2em; margin-top: .5em; }
   .action-label { text-align: right; color: var(--muted); font-weight: 700; }
   .action-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5em; }
+  .audience button:disabled { opacity: .3; filter: grayscale(.7); cursor: default; }
+  .audience-state { font-family: var(--sans); font-size: .7em; color: var(--muted); margin-left: .5em; }
   .audience button {
     font: inherit; font-family: var(--display); font-size: 1.05em; padding: .45em .6em .35em; border-radius: .5em; cursor: pointer;
     border: 0; color: #0b0c10; background: var(--pc, var(--accent));
@@ -195,7 +197,7 @@
   </header>
 
   <section class="audience" id="audience">
-    <div class="audience-title">📣 Publikum</div>
+    <div class="audience-title">📣 Publikum<span class="audience-state" id="audience-state"></span></div>
     <div class="action-row">
       <div class="action-label">🫳 Item stehlen</div>
       <div class="action-buttons" data-action="steal"></div>
@@ -218,7 +220,7 @@
 
   <main>
     <section>
-      <h2>AKTUELLE RUNDE</h2>
+      <h2 id="round-title">AKTUELLE RUNDE</h2>
       <div class="players" id="players"></div>
     </section>
     <section>
@@ -324,12 +326,20 @@ function renderStealButtons() {
   }
 }
 
+// The game only acts on audience commands while a race/battle is running
+function setAudienceActive(active) {
+  for (const btn of document.querySelectorAll("#audience button[data-action]")) btn.disabled = !active;
+  $("audience-state").textContent = active ? "" : "· wartet auf die nächste Runde";
+}
+
 function render(s) {
   game = s.game;
   renderStealButtons();
+  setAudienceActive(Object.keys(s.round).length > 0 && !s.roundOver);
   setValue($("ml"), fmtCl(s.totalMl));
   setValue($("hits"), `${s.totalHits}×`);
 
+  $("round-title").textContent = s.roundOver ? "LETZTE RUNDE" : "AKTUELLE RUNDE";
   const round = Object.entries(s.round).map(([p, d]) => [Number(p), d]).sort((a, b) => a[0] - b[0]);
   const maxMl = Math.max(1, ...round.map(([, d]) => d.ml));
   $("players").innerHTML = round.length ? round.map(([p, d]) => `
@@ -363,6 +373,7 @@ function render(s) {
 }
 
 renderStealButtons();
+setAudienceActive(false);
 
 async function post(url, body, done, failed) {
   try {
