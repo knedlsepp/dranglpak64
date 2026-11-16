@@ -32,7 +32,7 @@
               libraries = [ pkgs.python3.pkgs.libgpiod ];
               flakeIgnore = [ "E501" ];
             }
-            (builtins.readFile ../drink-dispenser.py);
+            (builtins.readFile ./drink-dispenser.py);
           sc64deployer = pkgs.writeShellScript "sc64deployer" ''
             set -euo pipefail
             # Wait for /dev/gpiochip0 to exist and be readable/writable (Poor man's systemd After)

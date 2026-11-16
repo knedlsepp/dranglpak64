@@ -14,7 +14,7 @@
             {
               flakeIgnore = [ "E501" ];
             }
-            (builtins.readFile ../dashboard.py);
+            (builtins.readFile ./dashboard.py);
         in
         "${dashboard}/bin/drangl-dashboard ${../web}";
       DynamicUser = true;
