@@ -133,7 +133,7 @@ nixos-rebuild --target-host root@dranglpak64.local --flake ./. switch
 > Switch the N64 off and on again afterwards.
 
 Secrets (WiFi, Cloudflare tunnel) are [agenix](https://github.com/ryantm/agenix)-encrypted
-in [`secrets/`](secrets), see [`secrets.nix`](secrets.nix).
+in [`secrets/`](secrets), see [`secrets/secrets.nix`](secrets/secrets.nix).
 
 ## What's in here
 
