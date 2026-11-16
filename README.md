@@ -23,6 +23,10 @@ For hygiene, every tube ends in a replaceable paper mouthpiece.
 No buttons to press, no referee: the game itself tells the box exactly who just
 got hit by what.
 
+<p align="center">
+  <img src="docs/dranglpak64.jpg" alt="The DranglPak64: a Nintendo 64 with a SummerCart64 on top of a grey Rittal cabinet, four controllers plugged in, four transparent peristaltic pumps on the front" width="560">
+</p>
+
 ## How it works
 
 ```
