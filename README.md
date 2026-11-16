@@ -103,8 +103,12 @@ The relay board switches its relays with these GPIOs (active low), which is what
 The Pi also serves a **live dashboard** – on a big screen at the booth, on the
 visitors' phones via its own WiFi hotspot `DranglPak64`, and online at
 **[dranglpak64.knedlsepp.at](https://dranglpak64.knedlsepp.at)**. Everyone watching can
-steal a player's item or send a message right onto their screen – both harmless on
-purpose: neither pours a drink.
+steal a player's item, put the drunk goggles on them (tunnel vision for a few seconds)
+or send a message right onto their screen – all harmless on purpose: none pours a drink.
+
+<p align="center">
+  <img src="docs/dashboard.png" alt="The live dashboard: audience actions, today's totals, the current round, live ticker and most frequent mishaps" width="900">
+</p>
 
 ## Setup
 
