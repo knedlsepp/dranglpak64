@@ -1,4 +1,5 @@
-{ pkgs, config, lib, ... }:
+# The basics of the Pi: file system, boot loader, kernel, nix itself
+{ pkgs, lib, ... }:
 {
   # "${nixpkgs}/nixos/modules/installer/sd-card/sd-image-aarch64.nix" creates a
   # disk with this label on first boot. Therefore, we need to keep it. It is the

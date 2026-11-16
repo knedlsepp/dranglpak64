@@ -28,7 +28,6 @@
           nixos-hardware.nixosModules.raspberry-pi-4
           agenix.nixosModules.default
           ./configuration.nix
-          ./base.nix
         ];
       };
     };
