@@ -15,13 +15,10 @@
 The **DranglPak64** is a box you plug into a Nintendo 64. Up to four players race
 or battle as usual – each with a silicone tube in their mouth. Every time
 something hits you – a banana peel, a red shell, a truck, a bomb, a lightning
-bolt – the box switches on *your* pump and *drangelt* a shot straight into your
+bolt – the box switches on *your* pump and *dispenses* a shot straight into your
 mouth. No hands needed: they're busy with the controller anyway.
 
 For hygiene, every tube ends in a replaceable paper mouthpiece.
-
-No buttons to press, no referee: the game itself tells the box exactly who just
-got hit by what.
 
 <p align="center">
   <img src="docs/dranglpak64.jpg" alt="The DranglPak64: a Nintendo 64 with a SummerCart64 on top of a grey Rittal cabinet, four controllers plugged in, four transparent peristaltic pumps on the front" width="560">
