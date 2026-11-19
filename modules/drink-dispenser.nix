@@ -19,12 +19,15 @@
             name = "upload-rom";
             runtimeInputs = [ pkgs.sc64deployer pkgs.socat ];
             text = ''
-              until sc64deployer list; do sleep 2; done
-              sc64deployer upload ${pkgs.nk64-rom}/mk64.eu.v11.z64
+              # Only the debug output goes to drink-dispenser, the rest to the journal
+              until sc64deployer list >&2; do sleep 2; done
+              sc64deployer upload ${pkgs.nk64-rom}/mk64.eu.v11.z64 >&2
               # Lines on its stdin get sent to the game: commands from drangl-dashboard
               # arrive as UDP datagrams. (An open stdin also prevents
               # "[IS-Viewer 64]: Stopped listening".)
-              exec socat -u UDP-RECV:6465,bind=127.0.0.1 STDOUT | sc64deployer debug --isv 0x03FF0000
+              # It's exec'd rather than piped into, so the service restarts when it
+              # dies, e.g. when the N64 is switched off and the SC64 loses the ROM.
+              exec sc64deployer debug --isv 0x03FF0000 < <(socat -u UDP-RECV:6465,bind=127.0.0.1 STDOUT)
             '';
           };
           drink-dispenser = pkgs.writers.writePython3Bin "drink-dispenser"
