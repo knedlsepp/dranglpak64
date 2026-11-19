@@ -27,7 +27,10 @@
               # "[IS-Viewer 64]: Stopped listening".)
               # It's exec'd rather than piped into, so the service restarts when it
               # dies, e.g. when the N64 is switched off and the SC64 loses the ROM.
-              exec sc64deployer debug --isv 0x03FF0000 < <(socat -u UDP-RECV:6465,bind=127.0.0.1 STDOUT)
+              # The first line is for N64FlashcartMenu, which the console boots when
+              # switched on before the upload: "reboot" makes it boot the new ROM.
+              # A running nk64 ignores it.
+              exec sc64deployer debug --isv 0x03FF0000 < <(echo reboot; exec socat -u UDP-RECV:6465,bind=127.0.0.1 STDOUT)
             '';
           };
           drink-dispenser = pkgs.writers.writePython3Bin "drink-dispenser"
