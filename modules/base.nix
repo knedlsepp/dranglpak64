@@ -14,6 +14,9 @@
     loader = {
       generic-extlinux-compatible.enable = lib.mkDefault true;
       grub.enable = lib.mkDefault false;
+      # No boot menu: there's no keyboard on the Pi anyway, and it delays the ROM
+      # upload by 5 s
+      timeout = 0;
     };
   };
   nix.settings = {

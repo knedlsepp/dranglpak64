@@ -20,7 +20,7 @@
             runtimeInputs = [ pkgs.sc64deployer pkgs.socat ];
             text = ''
               # Only the debug output goes to drink-dispenser, the rest to the journal
-              until sc64deployer list >&2; do sleep 2; done
+              until sc64deployer list >&2; do sleep 0.5; done
               sc64deployer upload ${pkgs.nk64-rom}/mk64.eu.v11.z64 >&2
               # Lines on its stdin get sent to the game: commands from drangl-dashboard
               # arrive as UDP datagrams. (An open stdin also prevents
@@ -69,6 +69,10 @@
       "gpio" # Access to GPIO devices
     ];
   };
+
+  # The SC64's USB serial driver. Loaded on demand it only came after 19 s,
+  # together with all the other drivers, delaying the ROM upload.
+  boot.initrd.kernelModules = [ "ftdi_sio" ];
 
   users.groups.sc64deployer = { };
   users.groups.gpio = { };
