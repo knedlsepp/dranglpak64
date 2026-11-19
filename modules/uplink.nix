@@ -18,6 +18,9 @@
       enable = true;
       # psk_<network>=<output of `wpa_passphrase <network>`>
       secretsFile = config.age.secrets.wireless.path;
+      # Without it the chip also scans channel 165, which isn't allowed in Austria:
+      # "brcmf_set_channel: set chanspec 0xd0a5 fail" every 11 s while unconnected.
+      extraConfig = "country=AT";
       networks = {
         # Preferred over banananet when both are in range
         knoedlnetz = {

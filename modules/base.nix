@@ -18,6 +18,19 @@
       # upload by 5 s
       timeout = 0;
     };
+    # Unused audio, camera and Bluetooth. Their drivers warned on every boot
+    # ("module is from the staging directory").
+    blacklistedKernelModules = [
+      "snd_bcm2835"
+      "bcm2835_v4l2"
+      "bcm2835_mmal_vchiq"
+      "vchiq"
+      "bluetooth"
+      "hci_uart"
+      "btbcm"
+      "btqca"
+      "btsdio"
+    ];
   };
   nix.settings = {
     experimental-features = lib.mkDefault "nix-command flakes";

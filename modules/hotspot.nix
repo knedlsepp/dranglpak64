@@ -3,6 +3,10 @@
 # right after connecting.
 { ... }:
 {
+  # The stick's firmware (rtlwifi/rtl8192cufw*.bin) is in linux-firmware.
+  # Without it the driver complained on every boot.
+  hardware.enableRedistributableFirmware = true;
+
   # A stable name for the stick regardless of USB port
   systemd.network.links."10-wlan-hotspot" = {
     matchConfig.Driver = "rtl8192cu";
