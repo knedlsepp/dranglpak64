@@ -256,6 +256,9 @@ def main() -> None:
                 data = json.loads(raw_line)
             except json.JSONDecodeError:
                 continue
+            # Valid JSON need not be an object, e.g. a line "123" from the game
+            if not isinstance(data, dict):
+                continue
 
             logging.info(f"Got event: {raw_line}")
 
