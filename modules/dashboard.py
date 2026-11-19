@@ -26,6 +26,10 @@ neither dispenses a drink. They can also show a message on a player's
 screen (POST /say?to=N, or to=all, the text as body), sent as
 "say <N|*> <text>".
 
+/status shows whether the N64 can be reset yet (after a cold start it
+boots N64FlashcartMenu, the ROM only arrives later) and how the Pi is
+doing, from /status.json.
+
 Usage: drangl-dashboard <web dir>
 """
 
@@ -37,7 +41,9 @@ import json
 import logging
 import os
 import queue
+import shutil
 import socket
+import subprocess
 import sys
 import threading
 import time
@@ -76,6 +82,16 @@ WEBSOCKET_KEEPALIVE: float = 15.0
 
 STATE_FILE: Path = Path(os.environ.get("STATE_DIRECTORY", ".")) / "stats.json"
 
+# Written by sc64deployer.service: "waiting" (for the SC64), "uploading" or
+# "ready". Gone while the service isn't running.
+SC64_STATE_FILE: Path = Path("/run/sc64deployer/state")
+UPLINK: str = "wlanup"
+HOTSPOT: str = "wlanap"
+# Shown on /status: [{"unit": ..., "label": ...}], from dashboard.nix
+STATUS_UNITS: list[dict] = json.loads(os.environ.get("STATUS_UNITS", "[]"))
+# systemctl needs D-Bus, which a DynamicUser can't connect to. Varlink works.
+SYSTEMD_VARLINK: str = "/run/systemd/io.systemd.Manager"
+
 
 def current_day() -> str:
     start_of_day = datetime.timedelta(hours=DAY_START_HOUR)
@@ -113,6 +129,8 @@ class Dashboard:
         # Bumped on every change, lets polling clients skip unchanged state.
         self._version = 0
         self._audience_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Wall clock, like the mtime of SC64_STATE_FILE
+        self._last_game_event = 0.0
 
     def _load(self) -> dict:
         try:
@@ -291,6 +309,24 @@ class Dashboard:
             if q in self._clients:
                 self._clients.remove(q)
 
+    def game_event(self) -> None:
+        """Any event from the game: nk64 is running."""
+        with self._lock:
+            self._last_game_event = time.time()
+
+    def n64_status(self) -> dict:
+        """The upload's state, "running" once nk64 sent something after it."""
+        try:
+            state = SC64_STATE_FILE.read_text().strip()
+            since = SC64_STATE_FILE.stat().st_mtime
+        except OSError:
+            return {"state": "stopped"}
+        with self._lock:
+            last_event = self._last_game_event
+        if state == "ready" and last_event > since:
+            state = "running"
+        return {"state": state, "since": since, "lastEvent": last_event or None}
+
 
 def udp_listener(dashboard: Dashboard) -> None:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -301,6 +337,7 @@ def udp_listener(dashboard: Dashboard) -> None:
         try:
             data = json.loads(raw)
             event = str(data["event"])
+            dashboard.game_event()
             if event == "race_start":
                 characters = [int(c) for c in data.get("characters", [])]
                 dashboard.start_race(int(data.get("mode", -1)), int(data.get("players", len(characters))), characters)
@@ -326,6 +363,94 @@ def round_watchdog(dashboard: Dashboard) -> None:
         time.sleep(2)
         dashboard.check_new_day()
         dashboard.check_round_timeout()
+
+
+def read_text(path: str | Path) -> str | None:
+    try:
+        return Path(path).read_text().strip()
+    except OSError:
+        return None
+
+
+def run(*args: str) -> str:
+    """Output of a command, empty if it failed."""
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=2).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def undervoltage() -> bool | None:
+    """Whether the Pi's supply voltage is too low right now, None if unknown."""
+    for hwmon in Path("/sys/class/hwmon").glob("hwmon*"):
+        if read_text(hwmon / "name") == "rpi_volt":
+            return read_text(hwmon / "in0_lcrit_alarm") == "1"
+    return None
+
+
+def wifi_status() -> dict:
+    ssid = signal = ip = None
+    for line in run("iw", "dev", UPLINK, "link").splitlines():
+        key, _, value = line.strip().partition(": ")
+        if key == "SSID":
+            ssid = value
+        elif key == "signal":
+            signal = int(value.split()[0])
+    try:
+        interfaces = json.loads(run("ip", "-j", "-4", "addr", "show", "dev", UPLINK) or "[]")
+        ip = next((a["local"] for i in interfaces for a in i.get("addr_info", [])), None)
+    except (ValueError, KeyError, TypeError):
+        pass
+    return {"ssid": ssid, "signal": signal, "ip": ip}
+
+
+def unit_state(unit: str) -> tuple[str, str]:
+    """ActiveState and SubState of unit, ("missing", "") if not loaded."""
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(2)
+            sock.connect(SYSTEMD_VARLINK)
+            call = {"method": "io.systemd.Unit.List", "parameters": {"name": unit}}
+            sock.sendall(json.dumps(call).encode() + b"\0")
+            reply = b""
+            while not reply.endswith(b"\0"):
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                reply += chunk
+        runtime = json.loads(reply.rstrip(b"\0"))["parameters"]["runtime"]
+        return runtime["ActiveState"], runtime["SubState"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return "missing", ""
+
+
+def units_status() -> list[dict]:
+    units = []
+    for u in STATUS_UNITS:
+        active, sub = unit_state(u["unit"])
+        units.append({"label": u["label"], "active": active, "sub": sub})
+    return units
+
+
+def pi_status() -> dict:
+    meminfo = {}
+    for line in (read_text("/proc/meminfo") or "").splitlines():
+        key, _, value = line.partition(":")
+        meminfo[key] = int(value.split()[0]) * 1024
+    temperature = read_text("/sys/class/thermal/thermal_zone0/temp")
+    disk = shutil.disk_usage("/")
+    return {
+        "uptime": float((read_text("/proc/uptime") or "0").split()[0]),
+        "temperature": int(temperature) / 1000 if temperature else None,
+        "undervoltage": undervoltage(),
+        "load": os.getloadavg(),
+        "memory": {"used": meminfo.get("MemTotal", 0) - meminfo.get("MemAvailable", 0), "total": meminfo.get("MemTotal", 0)},
+        "disk": {"used": disk.used, "total": disk.total},
+        "wifi": wifi_status(),
+        "hotspotClients": run("iw", "dev", HOTSPOT, "station", "dump").count("Station "),
+        "clockSynced": Path("/run/systemd/timesync/synchronized").exists(),
+        "units": units_status(),
+    }
 
 
 CONTENT_TYPES: dict[str, str] = {
@@ -370,9 +495,13 @@ def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> t
             if url.path == "/state":
                 self._state(url.query)
                 return
+            if url.path == "/status.json":
+                self._status()
+                return
             # Any unknown path gets the dashboard, so captive portal checks of
             # phones land there too.
-            content_type, body = files.get(self.path, files["/index.html"])
+            path = "/status.html" if url.path == "/status" else self.path
+            content_type, body = files.get(path, files["/index.html"])
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
@@ -414,6 +543,15 @@ def make_handler(dashboard: Dashboard, files: dict[str, tuple[str, bytes]]) -> t
                 self.end_headers()
                 return
             body = json.dumps(snapshot).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _status(self) -> None:
+            body = json.dumps({"now": time.time(), "n64": dashboard.n64_status(), "pi": pi_status()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Cache-Control", "no-store")

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DranglPak64 · Status</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+  /* Served by the Pi itself: visitors on the hotspot have no internet. */
+  @font-face {
+    font-family: "Russo One";
+    src: url("/RussoOne-Regular.ttf") format("truetype");
+    font-display: swap;
+  }
+  /* Same as index.html */
+  :root {
+    --bg: #07080b;
+    --panel: #11141a;
+    --line: #262b36;
+    --text: #eef1f6;
+    --muted: #8a93a6;
+    --accent: #ffb000;
+    --hot: #ff5a1f;
+    --ok: #3ddc84;
+    --display: "Russo One", system-ui, sans-serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    min-height: 100vh;
+    background: radial-gradient(ellipse at top, #1a1f2b 0%, var(--bg) 65%);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+  }
+  .wrap { max-width: 52em; margin: 0 auto; padding: 1.4em 16px 3em; display: grid; gap: 1.2em; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+  header img { height: 2.6em; display: block; }
+  header a { color: var(--muted); font-size: .9em; text-decoration: none; border-bottom: 1px solid var(--line); }
+  header a:hover, header a:focus { color: var(--text); border-color: var(--text); }
+  h2 { font-family: var(--display); font-weight: 400; font-size: .85em; color: var(--muted); letter-spacing: .15em; margin-bottom: .8em; }
+  section {
+    background: linear-gradient(180deg, #161a22 0%, var(--panel) 100%);
+    border: 1px solid var(--line); border-radius: .6em; padding: 1.2em 1.4em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 .4em 1.2em rgba(0, 0, 0, .4);
+  }
+  #n64 { border-left: .4em solid var(--muted); }
+  #n64[data-tone="go"] { border-left-color: var(--accent); }
+  #n64[data-tone="ok"] { border-left-color: var(--ok); }
+  #n64[data-tone="bad"] { border-left-color: var(--hot); }
+  #n64-title { font-family: var(--display); font-weight: 400; font-size: clamp(1.6em, 6vw, 2.4em); line-height: 1.15; }
+  #n64[data-tone="go"] #n64-title { color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+  #n64[data-tone="ok"] #n64-title { color: var(--ok); }
+  #n64[data-tone="bad"] #n64-title { color: var(--hot); }
+  #n64-detail { color: var(--muted); margin-top: .4em; }
+  @keyframes pulse { 50% { opacity: .55; } }
+  @media (prefers-reduced-motion: reduce) { #n64[data-tone="go"] #n64-title { animation: none; } }
+  dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(9em, 1fr)); gap: 1em 1.4em; }
+  dt { color: var(--muted); font-size: .85em; }
+  dd { font-variant-numeric: tabular-nums; font-size: 1.05em; margin-top: .15em; overflow-wrap: break-word; }
+  .bad { color: var(--hot); }
+  .warn { color: var(--accent); }
+  .good { color: var(--ok); }
+  ul { list-style: none; padding: 0; display: grid; gap: .5em; }
+  li { display: flex; justify-content: space-between; gap: 1em; }
+  li span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #conn { color: var(--muted); font-size: .85em; text-align: right; }
+  #conn.off { color: var(--hot); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a href="/" aria-label="Zum Dashboard" style="border: 0"><img src="/logo.svg" alt="DranglPak64"></a>
+    <a href="/">Zum Dashboard</a>
+  </header>
+
+  <section id="n64" aria-live="polite">
+    <h2>N64</h2>
+    <p id="n64-title">…</p>
+    <p id="n64-detail"></p>
+  </section>
+
+  <section>
+    <h2>RASPBERRY PI</h2>
+    <dl>
+      <div><dt>Temperatur</dt><dd id="temperature">–</dd></div>
+      <div><dt>Stromversorgung</dt><dd id="power">–</dd></div>
+      <div><dt>Last (1/5/15 min)</dt><dd id="load">–</dd></div>
+      <div><dt>Arbeitsspeicher</dt><dd id="memory">–</dd></div>
+      <div><dt>SD-Karte</dt><dd id="disk">–</dd></div>
+      <div><dt>Läuft seit</dt><dd id="uptime">–</dd></div>
+      <div><dt>WLAN</dt><dd id="wifi">–</dd></div>
+      <div><dt>IP-Adresse</dt><dd id="ip">–</dd></div>
+      <div><dt>Geräte im Hotspot</dt><dd id="clients">–</dd></div>
+      <div><dt>Uhrzeit</dt><dd id="clock">–</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>DIENSTE</h2>
+    <ul id="units"></ul>
+  </section>
+
+  <p id="conn">Verbinde …</p>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  function ago(seconds) {
+    seconds = Math.max(0, Math.round(seconds));
+    if (seconds < 60) return `${seconds} s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ${seconds % 60} s`;
+    const hours = Math.floor(seconds / 3600);
+    if (hours < 48) return `${hours} h ${Math.floor(seconds % 3600 / 60)} min`;
+    return `${Math.floor(hours / 24)} Tagen`;
+  }
+
+  function bytes(n) {
+    const gib = n / 2 ** 30;
+    return gib >= 1 ? `${gib.toFixed(1)} GiB` : `${Math.round(n / 2 ** 20)} MiB`;
+  }
+
+  function set(id, text, cls = "") {
+    const el = $(id);
+    el.textContent = text;
+    el.className = cls;
+  }
+
+  function showN64(n64, now) {
+    const since = n64.since ? ago(now - n64.since) : "";
+    const [tone, title, detail] = {
+      stopped: ["bad", "Upload-Dienst läuft nicht", "sc64deployer.service ist gestoppt. Noch nicht resetten."],
+      waiting: ["wait", "Noch nicht resetten", `Warte seit ${since} auf den SummerCart64. Steckt das USB-Kabel?`],
+      uploading: ["wait", "Noch nicht resetten", `ROM wird hochgeladen (seit ${since}) …`],
+      ready: ["go", "Jetzt Reset am N64 drücken", `Die ROM ist seit ${since} oben, nk64 hat sich seither noch nicht gemeldet.`],
+      running: ["ok", "nk64 läuft", `Letztes Event vor ${ago(now - n64.lastEvent)}.`],
+    }[n64.state] || ["bad", `Unbekannter Zustand: ${n64.state}`, ""];
+    $("n64").dataset.tone = tone;
+    $("n64-title").textContent = title;
+    $("n64-detail").textContent = detail;
+  }
+
+  function showPi(pi) {
+    const t = pi.temperature;
+    set("temperature", t == null ? "?" : `${t.toFixed(1)} °C`, t >= 80 ? "bad" : t >= 70 ? "warn" : "");
+    set("power", pi.undervoltage == null ? "?" : pi.undervoltage ? "Unterspannung!" : "OK",
+        pi.undervoltage ? "bad" : pi.undervoltage === false ? "good" : "");
+    set("load", pi.load.map(l => l.toFixed(2)).join(" / "), pi.load[0] >= 4 ? "warn" : "");
+    set("memory", `${bytes(pi.memory.used)} / ${bytes(pi.memory.total)}`);
+    const diskFull = pi.disk.used / pi.disk.total;
+    set("disk", `${bytes(pi.disk.used)} / ${bytes(pi.disk.total)}`, diskFull >= .95 ? "bad" : diskFull >= .85 ? "warn" : "");
+    set("uptime", ago(pi.uptime));
+    const w = pi.wifi;
+    set("wifi", w.ssid ? `${w.ssid}${w.signal != null ? ` (${w.signal} dBm)` : ""}` : "nicht verbunden",
+        !w.ssid ? "bad" : w.signal != null && w.signal < -75 ? "warn" : "");
+    set("ip", w.ip || "–");
+    set("clients", String(pi.hotspotClients));
+    set("clock", pi.clockSynced ? "synchron" : "nicht synchron (kein Internet?)", pi.clockSynced ? "good" : "warn");
+
+    $("units").replaceChildren(...pi.units.map(u => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      const state = document.createElement("span");
+      name.textContent = u.label;
+      state.textContent = u.active === "missing" ? "fehlt" : u.sub ? `${u.active} (${u.sub})` : u.active;
+      state.className = u.active === "active" ? "good" : u.active === "activating" ? "warn" : "bad";
+      li.append(name, state);
+      return li;
+    }));
+  }
+
+  async function refresh() {
+    try {
+      const response = await fetch("/status.json", { cache: "no-store" });
+      if (!response.ok) throw new Error(response.status);
+      const status = await response.json();
+      showN64(status.n64, status.now);
+      showPi(status.pi);
+      set("conn", `Aktualisiert ${new Date().toLocaleTimeString("de-AT")}`);
+    } catch (e) {
+      set("conn", "Keine Verbindung zum Pi", "off");
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>

@@ -132,6 +132,10 @@ nixos-rebuild --target-host root@dranglpak64.local --flake ./. switch
 > A new ROM gets uploaded while the old one is running, which crashes the game.
 > Switch the N64 off and on again afterwards.
 
+**Cold start**: switched on together with the Pi, the N64 boots the flashcart menu,
+since the ROM only arrives about half a minute later. Press reset once
+[`/status`](http://dranglpak64.local/status) says so. It also shows how the Pi is doing.
+
 Secrets (WiFi, Cloudflare tunnel) are [agenix](https://github.com/ryantm/agenix)-encrypted
 in [`secrets/`](secrets), see [`secrets/secrets.nix`](secrets/secrets.nix).
 

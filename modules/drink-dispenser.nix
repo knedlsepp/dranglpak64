@@ -19,9 +19,16 @@
             name = "upload-rom";
             runtimeInputs = [ pkgs.sc64deployer pkgs.socat ];
             text = ''
+              # For the status page of drangl-dashboard. systemd removes the file
+              # when the service stops.
+              state() { echo "$1" > "$RUNTIME_DIRECTORY/state"; }
+              state waiting
               # Only the debug output goes to drink-dispenser, the rest to the journal
               until sc64deployer list >&2; do sleep 0.5; done
+              state uploading
               sc64deployer upload ${pkgs.nk64-rom}/mk64.eu.v11.z64 >&2
+              # The N64 can be reset now, unless it's already running nk64
+              state ready
               # Lines on its stdin get sent to the game: commands from drangl-dashboard
               # arrive as UDP datagrams. (An open stdin also prevents
               # "[IS-Viewer 64]: Stopped listening".)
@@ -50,6 +57,9 @@
 
       User = "sc64deployer";
       Group = "sc64deployer";
+      # /run/sc64deployer/state, read by drangl-dashboard
+      RuntimeDirectory = "sc64deployer";
+      RuntimeDirectoryMode = "0755";
       Restart = "always";
       RestartSec = "1";
     };
