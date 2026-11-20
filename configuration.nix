@@ -27,6 +27,8 @@
     users.root = {
       openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDTL9AJG8V8Hl3yiPJeghn3GcIy3sl+jsED+RgC5Md4E sepp@localhohohost"
+        # Phone, for emergencies at the booth via the hotspot
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIpypxRXKqsWteFp0z8NEfmKxR8BZ3tolHnWupmbyjXx JuiceSSH@Fairphone"
       ];
     };
   };
